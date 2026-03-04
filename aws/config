@@ -4,22 +4,35 @@
 # Do not edit manually - changes will be overwritten by config sync
 # =============================================================================
 
-# Default profile: NorthBuilt internal account (SSO)
-# This is used when you run 'aws' commands without --profile
+# -----------------------------------------------------------------------------
+# NorthBuilt Internal Account
+# -----------------------------------------------------------------------------
+
+# Default profile uses 1Password for credentials
 [default]
-sso_start_url = https://northbuilt.awsapps.com/start
-sso_region = us-east-1
-sso_account_id = 123456789012
-sso_role_name = AdministratorAccess
+credential_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee"
+mfa_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee" --otp
+mfa_serial = __MFA_SERIAL:AWS - NorthBuilt:Employee__
 region = us-east-1
 
-# Explicit NorthBuilt profile (same as default, for clarity)
+# Explicit northbuilt profile (same as default)
 [profile northbuilt]
-sso_start_url = https://northbuilt.awsapps.com/start
-sso_region = us-east-1
-sso_account_id = 123456789012
-sso_role_name = AdministratorAccess
+credential_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee"
+mfa_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee" --otp
+mfa_serial = __MFA_SERIAL:AWS - NorthBuilt:Employee__
 region = us-east-1
+
+# -----------------------------------------------------------------------------
+# TODO: SSO Configuration (not yet set up)
+# -----------------------------------------------------------------------------
+# Once AWS IAM Identity Center is configured, uncomment and update:
+#
+# [profile northbuilt-sso]
+# sso_start_url = https://northbuilt.awsapps.com/start
+# sso_region = us-east-1
+# sso_account_id = YOUR_ACCOUNT_ID
+# sso_role_name = AdministratorAccess
+# region = us-east-1
 
 # =============================================================================
 # Client Accounts
@@ -51,7 +64,23 @@ region = us-east-1
 # NorthBuilt Client Accounts
 # -----------------------------------------------------------------------------
 
-# Laravel Vapor deployment account (Engineering vault)
-[profile laravelvapor]
-credential_process = __HELPER_PATH__ "AWS Access Key (laravelvapor)" "Engineering"
+# Donate For Dough client account
+[profile donatefordough]
+credential_process = __HELPER_PATH__ "AWS - Donate For Dough" "Donate For Dough"
+mfa_process = __HELPER_PATH__ "AWS - Donate For Dough" "Donate For Dough" --otp
+mfa_serial = __MFA_SERIAL:AWS - Donate For Dough:Donate For Dough__
+region = us-east-1
+
+# Retina Consultants of Minnesota client account
+[profile retina]
+credential_process = __HELPER_PATH__ "AWS - Retina" "Retina Consultants of Minnesota"
+mfa_process = __HELPER_PATH__ "AWS - Retina" "Retina Consultants of Minnesota" --otp
+mfa_serial = __MFA_SERIAL:AWS - Retina:Retina Consultants of Minnesota__
+region = us-east-1
+
+# ACT (Regenatrak) client account
+[profile act]
+credential_process = __HELPER_PATH__ "AWS - ACT" "Regenatrak"
+mfa_process = __HELPER_PATH__ "AWS - ACT" "Regenatrak" --otp
+mfa_serial = __MFA_SERIAL:AWS - ACT:Regenatrak__
 region = us-east-1
