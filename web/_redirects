@@ -1,4 +1,0 @@
-# Cloudflare Pages redirects
-# Redirect root to install script for curl | bash convenience
-
-/ /install 200

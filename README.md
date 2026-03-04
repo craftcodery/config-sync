@@ -7,7 +7,7 @@ Automated AWS configuration for NorthBuilt employee workstations.
 **Run this single command on your MacBook:**
 
 ```bash
-curl -fsSL https://setup.northbuilt.com | bash
+curl -fsSL https://setup.northbuilt.com/install | bash
 ```
 
 Or visit [setup.northbuilt.com](https://setup.northbuilt.com) in your browser for documentation.
@@ -131,13 +131,13 @@ aws-vault-1password "AWS - Client Name" "Vault Name" --validate
 ├── bin/
 │   └── aws-vault-1password   # 1Password credential helper
 ├── docs/
-│   └── 1password-aws-standard.md  # 1Password entry format
-├── launchd/
-│   └── com.craftcodery.config-sync.plist  # (Template only)
-└── web/
-    ├── install               # Dual-purpose install script (webpage + bash)
-    ├── worker.js             # Cloudflare Worker for setup.northbuilt.com
-    └── README.md             # Deployment instructions
+│   ├── 1password-aws-standard.md  # 1Password entry format
+│   └── setup/                # GitHub Pages for setup.northbuilt.com
+│       ├── index.html        # Landing page
+│       ├── install           # Setup script (copy of setup.sh)
+│       └── CNAME             # Custom domain config
+└── launchd/
+    └── com.craftcodery.config-sync.plist  # (Template only)
 ```
 
 ### How It Works
