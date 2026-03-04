@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Unique identifier for this agent -->
+    <key>Label</key>
+    <string>com.craftcodery.config-sync</string>
+
+    <!-- Command to run -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-l</string>
+        <string>-c</string>
+        <string>$HOME/.craftcodery-config/sync.sh</string>
+    </array>
+
+    <!-- Run every 4 hours (14400 seconds) -->
+    <key>StartInterval</key>
+    <integer>14400</integer>
+
+    <!-- Also run shortly after login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Minimum time between runs (prevents rapid re-runs on failure) -->
+    <key>ThrottleInterval</key>
+    <integer>300</integer>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/tmp</string>
+
+    <!-- Log stdout -->
+    <key>StandardOutPath</key>
+    <string>/tmp/craftcodery-config-sync.out</string>
+
+    <!-- Log stderr -->
+    <key>StandardErrorPath</key>
+    <string>/tmp/craftcodery-config-sync.err</string>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>

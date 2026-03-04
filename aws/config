@@ -1,0 +1,57 @@
+# =============================================================================
+# NorthBuilt AWS Configuration
+# Managed by: https://github.com/craftcodery/northbuilt-workstation-config
+# Do not edit manually - changes will be overwritten by config sync
+# =============================================================================
+
+# Default profile: NorthBuilt internal account (SSO)
+# This is used when you run 'aws' commands without --profile
+[default]
+sso_start_url = https://northbuilt.awsapps.com/start
+sso_region = us-east-1
+sso_account_id = 123456789012
+sso_role_name = AdministratorAccess
+region = us-east-1
+
+# Explicit NorthBuilt profile (same as default, for clarity)
+[profile northbuilt]
+sso_start_url = https://northbuilt.awsapps.com/start
+sso_region = us-east-1
+sso_account_id = 123456789012
+sso_role_name = AdministratorAccess
+region = us-east-1
+
+# =============================================================================
+# Client Accounts
+# Credentials stored in 1Password
+#
+# IMPORTANT: Set OP_ACCOUNT environment variable in your shell profile:
+#   export OP_ACCOUNT="craftcodery.1password.com"
+#
+# Add to ~/.zshrc or ~/.bashrc to make persistent
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Template: Client WITHOUT MFA
+# -----------------------------------------------------------------------------
+# [profile client-example]
+# credential_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name"
+# region = us-east-1
+
+# -----------------------------------------------------------------------------
+# Template: Client WITH MFA
+# -----------------------------------------------------------------------------
+# [profile client-example-mfa]
+# credential_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name"
+# mfa_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name" --otp
+# mfa_serial = arn:aws:iam::ACCOUNT_ID:mfa/USERNAME
+# region = us-east-1
+
+# -----------------------------------------------------------------------------
+# NorthBuilt Client Accounts
+# -----------------------------------------------------------------------------
+
+# Laravel Vapor deployment account (Engineering vault)
+[profile laravelvapor]
+credential_process = __HELPER_PATH__ "AWS Access Key (laravelvapor)" "Engineering"
+region = us-east-1
