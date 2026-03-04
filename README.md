@@ -77,26 +77,48 @@ cat ~/Library/Logs/craftcodery-config-sync.log
 
 ```
 workstation-config/
-├── README.md           # This file
-├── setup.sh            # Initial bootstrap (run once)
-├── sync.sh             # Config sync (runs automatically)
+├── README.md                    # This file
+├── setup.sh                     # Initial bootstrap (run once)
+├── sync.sh                      # Config sync (runs automatically)
 ├── aws/
-│   └── config          # AWS CLI configuration
+│   └── config                   # AWS CLI configuration
 ├── bin/
-│   └── aws-vault-1password  # Helper script for 1Password integration
+│   └── aws-vault-1password      # Helper script for 1Password integration
+├── docs/
+│   └── 1password-aws-standard.md  # Standard for AWS credentials in 1Password
 └── launchd/
     └── com.craftcodery.config-sync.plist  # Scheduled sync agent
 ```
 
 ## Adding New Client Accounts
 
-1. Add credentials to 1Password "Shared-AWS-Clients" vault:
-   - Item name: `AWS - Client Name`
-   - Username: Access Key ID
-   - Password: Secret Access Key
-   - One-time password: MFA secret (if required)
+### Step 1: Create 1Password Entry
 
-2. Add profile to `aws/config` in this repository:
+Follow the standard in [docs/1password-aws-standard.md](docs/1password-aws-standard.md).
+
+**Quick version:**
+- Item name: `AWS - Client Name`
+- Field `Access Key ID`: The AWS access key (starts with `AKIA...`)
+- Field `Secret Access Key`: The AWS secret key
+- One-time password: MFA secret (if required)
+
+### Step 2: Validate the Entry
+
+```bash
+aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
+```
+
+This checks that the entry is properly configured:
+```
+✓ Item found
+✓ Access Key ID: AKIAXAPR... (valid IAM user key)
+✓ Secret Access Key: ******** (valid length: 40 chars)
+✓ TOTP: Configured
+```
+
+### Step 3: Add AWS Profile
+
+Add profile to `aws/config` in this repository:
    ```ini
    [profile client-newclient]
    credential_process = /usr/local/bin/aws-vault-1password "AWS - New Client" "Shared-AWS-Clients"
@@ -138,6 +160,28 @@ Error: SSO session associated with this profile has expired
 ```
 
 **Solution:** Run `aws sso login` (will open browser for authentication)
+
+### Credentials don't look like AWS keys
+
+```
+Warning: Access Key ID doesn't look like an AWS key
+```
+
+**Solution:** The 1Password entry has console login credentials, not IAM access keys.
+
+1. Run validation to see what's wrong:
+   ```bash
+   aws-vault-1password "AWS - Client" "Vault" --validate
+   ```
+
+2. Get IAM access keys from AWS Console:
+   - IAM → Users → [User] → Security credentials → Create access key
+
+3. Update 1Password entry:
+   - Change `username` field to `Access Key ID`
+   - Store the Access Key ID (starts with `AKIA...`)
+   - Change `password` field to `Secret Access Key`
+   - Store the Secret Access Key
 
 ### MFA not working
 
