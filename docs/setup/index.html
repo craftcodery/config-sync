@@ -1,3 +1,5 @@
+#!/bin/bash
+: <<'HTML_CONTENT'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,8 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NorthBuilt Workstation Setup</title>
     <style>
+        /* Hide page until JS cleans up bash artifacts */
+        body { opacity: 0; transition: opacity 0.2s; }
+        body.loaded { opacity: 1; }
         * { box-sizing: border-box; }
-        body {
+        body.loaded {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #e4e4e7;
@@ -17,23 +22,17 @@
             justify-content: center;
             align-items: center;
         }
-        .container {
-            max-width: 700px;
-            width: 100%;
-        }
+        .container { max-width: 700px; width: 100%; }
         .logo {
             font-size: 3rem;
             font-weight: 700;
             background: linear-gradient(90deg, #60a5fa, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 0.5rem;
         }
-        .tagline {
-            color: #a1a1aa;
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-        }
+        .tagline { color: #a1a1aa; font-size: 1.1rem; margin-bottom: 2rem; }
         .install-box {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -41,16 +40,8 @@
             padding: 1.5rem;
             margin-bottom: 2rem;
         }
-        .install-label {
-            font-size: 0.875rem;
-            color: #a1a1aa;
-            margin-bottom: 0.75rem;
-        }
-        .install-command {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+        .install-label { font-size: 0.875rem; color: #a1a1aa; margin-bottom: 0.75rem; }
+        .install-command { display: flex; align-items: center; gap: 1rem; }
         .command {
             flex: 1;
             font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
@@ -76,45 +67,13 @@
         }
         .copy-btn:hover { background: #93c5fd; }
         .copy-btn.copied { background: #34d399; }
-        .section {
-            margin-bottom: 1.5rem;
-        }
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            color: #f4f4f5;
-        }
-        .section-content {
-            color: #a1a1aa;
-            line-height: 1.6;
-        }
-        .checklist {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .checklist li {
-            padding: 0.5rem 0;
-            padding-left: 1.75rem;
-            position: relative;
-        }
-        .checklist li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #34d399;
-            font-weight: bold;
-        }
-        .links {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        .links a {
-            color: #60a5fa;
-            text-decoration: none;
-        }
+        .section { margin-bottom: 1.5rem; }
+        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: #f4f4f5; }
+        .checklist { list-style: none; padding: 0; margin: 0; }
+        .checklist li { padding: 0.5rem 0; padding-left: 1.75rem; position: relative; color: #a1a1aa; }
+        .checklist li::before { content: "✓"; position: absolute; left: 0; color: #34d399; font-weight: bold; }
+        .links { display: flex; gap: 1.5rem; margin-top: 2rem; }
+        .links a { color: #60a5fa; text-decoration: none; }
         .links a:hover { text-decoration: underline; }
         .prereq {
             background: rgba(251, 191, 36, 0.1);
@@ -123,15 +82,8 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
-        .prereq-title {
-            color: #fbbf24;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        .prereq-content {
-            color: #d4d4d8;
-            font-size: 0.9rem;
-        }
+        .prereq-title { color: #fbbf24; font-weight: 600; margin-bottom: 0.5rem; }
+        .prereq-content { color: #d4d4d8; font-size: 0.9rem; }
         .footer {
             margin-top: 3rem;
             padding-top: 1.5rem;
@@ -147,13 +99,8 @@
             border-radius: 4px;
         }
         @media (max-width: 600px) {
-            .install-command {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .command {
-                font-size: 0.85rem;
-            }
+            .install-command { flex-direction: column; align-items: stretch; }
+            .command { font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -161,7 +108,6 @@
     <div class="container">
         <div class="logo">NorthBuilt</div>
         <div class="tagline">Workstation configuration in one command</div>
-
         <div class="prereq">
             <div class="prereq-title">Prerequisites</div>
             <div class="prereq-content">
@@ -169,15 +115,13 @@
                 (Settings → Developer → Integrate with 1Password CLI)
             </div>
         </div>
-
         <div class="install-box">
             <div class="install-label">Run this in your terminal:</div>
             <div class="install-command">
-                <code class="command" id="cmd">curl -fsSL https://setup.northbuilt.com/install | bash</code>
+                <code class="command" id="cmd">curl -fsSL https://setup.northbuilt.com | bash</code>
                 <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
             </div>
         </div>
-
         <div class="section">
             <div class="section-title">What this installs</div>
             <ul class="checklist">
@@ -188,36 +132,354 @@
                 <li>Hourly config sync service</li>
             </ul>
         </div>
-
         <div class="section">
             <div class="section-title">After setup</div>
-            <div class="section-content">
+            <div class="section-content" style="color: #a1a1aa;">
                 Test your access with: <code>aws sts get-caller-identity</code>
             </div>
         </div>
-
         <div class="links">
             <a href="https://github.com/craftcodery/northbuilt-workstation-config">View Source</a>
             <a href="https://github.com/craftcodery/northbuilt-workstation-config#readme">Documentation</a>
-            <a href="install">View Script</a>
         </div>
-
-        <div class="footer">
-            CraftCodery · NorthBuilt
-        </div>
+        <div class="footer">CraftCodery · NorthBuilt</div>
     </div>
-
     <script>
+        // Remove bash script artifacts (text nodes) from the DOM
+        (function() {
+            function cleanup() {
+                // Remove all text nodes that are direct children of body
+                Array.from(document.body.childNodes).forEach(function(node) {
+                    if (node.nodeType === 3) node.remove();
+                });
+                // Remove text nodes from html level too
+                Array.from(document.documentElement.childNodes).forEach(function(node) {
+                    if (node.nodeType === 3) node.remove();
+                });
+                document.body.classList.add('loaded');
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', cleanup);
+            } else {
+                cleanup();
+            }
+        })();
         function copyCommand(btn) {
-            const cmd = document.getElementById('cmd').textContent;
-            navigator.clipboard.writeText(cmd);
+            navigator.clipboard.writeText(document.getElementById('cmd').textContent);
             btn.textContent = 'Copied!';
             btn.classList.add('copied');
-            setTimeout(() => {
-                btn.textContent = 'Copy';
-                btn.classList.remove('copied');
-            }, 2000);
+            setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
         }
     </script>
 </body>
 </html>
+HTML_CONTENT
+
+# =============================================================================
+# NORTHBUILT WORKSTATION SETUP
+# =============================================================================
+# This file is both a webpage AND a bash script.
+# - Browsers render the HTML above (JS cleans up the bash parts)
+# - curl | bash executes the script below (bash ignores the HTML heredoc)
+# =============================================================================
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo ""
+echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║${NC}           ${GREEN}NorthBuilt Workstation Setup${NC}                        ${BLUE}║${NC}"
+echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+# =============================================================================
+# Phase 1: Install Homebrew
+# =============================================================================
+
+if ! command -v brew &> /dev/null; then
+    echo -e "${YELLOW}▶ Installing Homebrew...${NC}"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    if [[ -f /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -f /usr/local/bin/brew ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+
+    SHELL_PROFILE=""
+    if [[ -f "$HOME/.zshrc" ]]; then
+        SHELL_PROFILE="$HOME/.zshrc"
+    elif [[ -f "$HOME/.bashrc" ]]; then
+        SHELL_PROFILE="$HOME/.bashrc"
+    elif [[ -f "$HOME/.bash_profile" ]]; then
+        SHELL_PROFILE="$HOME/.bash_profile"
+    fi
+
+    if [[ -n "$SHELL_PROFILE" ]]; then
+        if [[ -f /opt/homebrew/bin/brew ]]; then
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$SHELL_PROFILE"
+        elif [[ -f /usr/local/bin/brew ]]; then
+            echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$SHELL_PROFILE"
+        fi
+    fi
+    echo -e "${GREEN}✓ Homebrew installed${NC}"
+else
+    echo -e "${GREEN}✓ Homebrew already installed${NC}"
+fi
+
+# =============================================================================
+# Phase 2: Install gum
+# =============================================================================
+
+if ! command -v gum &> /dev/null; then
+    echo -e "${YELLOW}▶ Installing gum (CLI toolkit)...${NC}"
+    brew install gum > /dev/null 2>&1
+    echo -e "${GREEN}✓ gum installed${NC}"
+fi
+
+# =============================================================================
+# Phase 3: Install tools with gum UI
+# =============================================================================
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Installing required tools..."
+
+gum spin --spinner dot --title "Installing AWS CLI..." -- brew install awscli 2>/dev/null || true
+gum spin --spinner dot --title "Installing jq..." -- brew install jq 2>/dev/null || true
+gum spin --spinner dot --title "Installing glow..." -- brew install glow 2>/dev/null || true
+gum spin --spinner dot --title "Installing 1Password CLI..." -- brew install --cask 1password-cli 2>/dev/null || true
+
+gum style --foreground 42 "✓ All tools installed"
+
+# =============================================================================
+# Phase 4: Verify 1Password CLI
+# =============================================================================
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Verifying 1Password CLI..."
+
+if ! op account list &> /dev/null; then
+    gum style \
+        --border rounded \
+        --border-foreground 196 \
+        --foreground 196 \
+        --padding "1 2" \
+        --margin "1 0" \
+        "1Password CLI needs to be connected to the 1Password app." \
+        "" \
+        "Please complete these steps:" \
+        "  1. Open 1Password app" \
+        "  2. Go to Settings → Developer" \
+        "  3. Enable 'Integrate with 1Password CLI'" \
+        "" \
+        "After enabling, re-run this script."
+    exit 1
+fi
+
+gum style --foreground 42 "✓ 1Password CLI connected"
+
+# =============================================================================
+# Phase 5: Configure OP_ACCOUNT
+# =============================================================================
+
+SHELL_PROFILE=""
+if [[ -f "$HOME/.zshrc" ]]; then
+    SHELL_PROFILE="$HOME/.zshrc"
+elif [[ -f "$HOME/.bashrc" ]]; then
+    SHELL_PROFILE="$HOME/.bashrc"
+elif [[ -f "$HOME/.bash_profile" ]]; then
+    SHELL_PROFILE="$HOME/.bash_profile"
+fi
+
+if [ -z "${OP_ACCOUNT:-}" ] && [ -n "$SHELL_PROFILE" ]; then
+    if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
+        gum style \
+            --border rounded \
+            --border-foreground 39 \
+            --padding "0 2" \
+            --margin "1 0" \
+            "Configuring 1Password account..."
+
+        echo '' >> "$SHELL_PROFILE"
+        echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
+        echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
+        export OP_ACCOUNT="craftcodery.1password.com"
+
+        gum style --foreground 42 "✓ OP_ACCOUNT configured in $SHELL_PROFILE"
+    else
+        gum style --foreground 42 "✓ OP_ACCOUNT already configured"
+    fi
+else
+    if [ -n "${OP_ACCOUNT:-}" ]; then
+        gum style --foreground 42 "✓ OP_ACCOUNT already set: $OP_ACCOUNT"
+    fi
+fi
+
+# =============================================================================
+# Phase 6: Set up configuration repository
+# =============================================================================
+
+CONFIG_DIR="$HOME/.craftcodery-config"
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Setting up configuration repository..."
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sync.sh" ] && [ -f "$SCRIPT_DIR/bin/aws-vault-1password" ]; then
+    if [ "$SCRIPT_DIR" != "$CONFIG_DIR" ]; then
+        rm -rf "$CONFIG_DIR" 2>/dev/null || true
+        ln -sf "$SCRIPT_DIR" "$CONFIG_DIR"
+        gum style --foreground 42 "✓ Linked config: $CONFIG_DIR → $SCRIPT_DIR"
+    else
+        gum spin --spinner dot --title "Updating config repository..." -- \
+            git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
+        gum style --foreground 42 "✓ Configuration repository updated"
+    fi
+elif [ -d "$CONFIG_DIR" ]; then
+    gum spin --spinner dot --title "Updating config repository..." -- \
+        git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
+    gum style --foreground 42 "✓ Configuration repository updated"
+else
+    gum spin --spinner dot --title "Cloning config repository..." -- \
+        git clone https://github.com/craftcodery/northbuilt-workstation-config.git "$CONFIG_DIR"
+    gum style --foreground 42 "✓ Configuration repository cloned"
+fi
+
+# =============================================================================
+# Phase 7: Deploy configurations
+# =============================================================================
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Deploying configurations..."
+
+chmod +x "$CONFIG_DIR/sync.sh"
+gum spin --spinner dot --title "Deploying AWS config and helper scripts..." -- \
+    env CONFIG_DIR="$CONFIG_DIR" OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
+
+gum style --foreground 42 "✓ Configurations deployed"
+
+# =============================================================================
+# Phase 8: Set up launchd service
+# =============================================================================
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Setting up automatic sync service..."
+
+LAUNCHD_DIR="$HOME/Library/LaunchAgents"
+PLIST_NAME="com.craftcodery.config-sync.plist"
+LOG_DIR="$HOME/Library/Logs"
+
+mkdir -p "$LAUNCHD_DIR"
+mkdir -p "$LOG_DIR"
+
+launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
+
+cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.craftcodery.config-sync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-l</string>
+        <string>-c</string>
+        <string>$HOME/.craftcodery-config/sync.sh --launchd</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>3600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>$HOME</string>
+        <key>OP_ACCOUNT</key>
+        <string>craftcodery.1password.com</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>$HOME</string>
+    <key>StandardOutPath</key>
+    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+</dict>
+</plist>
+EOF
+
+launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
+
+gum style --foreground 42 "✓ Automatic sync service configured (runs hourly)"
+
+# =============================================================================
+# Complete!
+# =============================================================================
+
+echo ""
+gum style \
+    --border double \
+    --border-foreground 42 \
+    --foreground 42 \
+    --padding "1 3" \
+    --margin "1 0" \
+    --bold \
+    "✓ Setup Complete!"
+
+echo ""
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "1 2" \
+    --margin "0 0 1 0" \
+    "Your workstation is now configured!" \
+    "" \
+    "Test your NorthBuilt AWS access:" \
+    "  aws sts get-caller-identity" \
+    "" \
+    "Use a client profile:" \
+    "  aws sts get-caller-identity --profile donatefordough" \
+    "" \
+    "Sync runs automatically every hour." \
+    "Manual sync: ~/.craftcodery-config/sync.sh" \
+    "View logs:   cat ~/Library/Logs/craftcodery-config-sync.log" \
+    "" \
+    "Documentation: glow ~/.craftcodery-config/README.md"
+
+echo ""

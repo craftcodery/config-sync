@@ -1,11 +1,19 @@
 # setup.northbuilt.com
 
-GitHub Pages site for the NorthBuilt workstation setup landing page.
+GitHub Pages site for the NorthBuilt workstation setup.
+
+## How It Works
+
+The `index.html` file is **both** a webpage AND a bash script:
+
+- **Browsers** render the HTML (JavaScript cleans up the bash artifacts)
+- **`curl | bash`** executes the script (bash ignores the HTML via heredoc)
+
+This is similar to how [firebase.tools](https://firebase.tools) works.
 
 ## Files
 
-- `index.html` - Landing page with documentation and copy button
-- `install` - The actual setup script (served as plain text)
+- `index.html` - Dual-purpose: landing page + setup script
 - `CNAME` - Custom domain configuration
 
 ## Setup
@@ -20,34 +28,43 @@ GitHub Pages site for the NorthBuilt workstation setup landing page.
 
 ### 2. Configure DNS
 
-Add a CNAME record in your DNS:
+Add a CNAME record in your DNS provider:
 
 ```
-setup.northbuilt.com → craftcodery.github.io
+Type:  CNAME
+Name:  setup
+Value: craftcodery.github.io
 ```
 
 ### 3. Wait for SSL
 
-GitHub automatically provisions an SSL certificate. This may take a few minutes.
+GitHub automatically provisions an SSL certificate (may take a few minutes).
 
 ## Usage
 
-**Browser:** Visit https://setup.northbuilt.com to see the documentation.
+**Browser:** Visit https://setup.northbuilt.com
 
 **Terminal:**
 ```bash
-curl -fsSL https://setup.northbuilt.com/install | bash
+curl -fsSL https://setup.northbuilt.com | bash
 ```
 
-## Keeping the Script Updated
+## Technical Details
 
-The `install` file is a copy of `setup.sh` from the repo root. When updating `setup.sh`, also update this file:
+The file structure:
 
 ```bash
-cp setup.sh docs/setup/install
-git add docs/setup/install
-git commit -m "Update install script"
-git push
+#!/bin/bash
+: <<'HTML_CONTENT'
+<!DOCTYPE html>
+<html>... (full HTML page) ...</html>
+HTML_CONTENT
+
+# Actual bash script here
+set -euo pipefail
+...
 ```
 
-Or create a pre-commit hook to do this automatically.
+- The `: <<'HTML_CONTENT'` is a bash heredoc that discards its content
+- Browsers see `#!/bin/bash` and `: <<'HTML_CONTENT'` as text, but JavaScript removes these text nodes
+- The page is hidden (`opacity: 0`) until JS cleanup completes, then fades in
