@@ -117,6 +117,48 @@ fi
 gum style --foreground 42 "✓ 1Password CLI connected"
 
 # =============================================================================
+# Phase 3.5: Configure OP_ACCOUNT for 1Password multi-account support
+# =============================================================================
+
+# Determine shell profile
+SHELL_PROFILE=""
+if [[ -f "$HOME/.zshrc" ]]; then
+    SHELL_PROFILE="$HOME/.zshrc"
+elif [[ -f "$HOME/.bashrc" ]]; then
+    SHELL_PROFILE="$HOME/.bashrc"
+elif [[ -f "$HOME/.bash_profile" ]]; then
+    SHELL_PROFILE="$HOME/.bash_profile"
+fi
+
+# Check if OP_ACCOUNT is already set
+if [ -z "${OP_ACCOUNT:-}" ] && [ -n "$SHELL_PROFILE" ]; then
+    if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
+        gum style \
+            --border rounded \
+            --border-foreground 39 \
+            --padding "0 2" \
+            --margin "1 0" \
+            "Configuring 1Password account..."
+
+        # Add OP_ACCOUNT to shell profile
+        echo '' >> "$SHELL_PROFILE"
+        echo '# 1Password account for AWS credential helper' >> "$SHELL_PROFILE"
+        echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
+
+        # Export for current session
+        export OP_ACCOUNT="craftcodery.1password.com"
+
+        gum style --foreground 42 "✓ OP_ACCOUNT configured in $SHELL_PROFILE"
+    else
+        gum style --foreground 42 "✓ OP_ACCOUNT already configured"
+    fi
+else
+    if [ -n "${OP_ACCOUNT:-}" ]; then
+        gum style --foreground 42 "✓ OP_ACCOUNT already set: $OP_ACCOUNT"
+    fi
+fi
+
+# =============================================================================
 # Phase 4: Clone/update configuration repository
 # =============================================================================
 
@@ -153,7 +195,7 @@ gum style \
 # Make sync script executable and run it
 chmod +x "$CONFIG_DIR/sync.sh"
 gum spin --spinner dot --title "Deploying AWS config and helper scripts..." -- \
-    "$CONFIG_DIR/sync.sh"
+    env CONFIG_DIR="$CONFIG_DIR" "$CONFIG_DIR/sync.sh"
 
 gum style --foreground 42 "✓ Configurations deployed"
 
