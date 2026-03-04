@@ -158,7 +158,7 @@ else
 fi
 
 # =============================================================================
-# Phase 5: Clone/update configuration repository
+# Phase 5: Set up configuration repository
 # =============================================================================
 
 CONFIG_DIR="$HOME/.craftcodery-config"
@@ -170,11 +170,28 @@ gum style \
     --margin "1 0" \
     "Setting up configuration repository..."
 
-if [ -d "$CONFIG_DIR" ]; then
+# Detect if we're running from within the repo
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/sync.sh" ] && [ -f "$SCRIPT_DIR/bin/aws-vault-1password" ]; then
+    # Running from within the repo - use this location
+    if [ "$SCRIPT_DIR" != "$CONFIG_DIR" ]; then
+        # Create symlink to this repo
+        rm -rf "$CONFIG_DIR" 2>/dev/null || true
+        ln -sf "$SCRIPT_DIR" "$CONFIG_DIR"
+        gum style --foreground 42 "✓ Linked config: $CONFIG_DIR → $SCRIPT_DIR"
+    else
+        gum spin --spinner dot --title "Updating config repository..." -- \
+            git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
+        gum style --foreground 42 "✓ Configuration repository updated"
+    fi
+elif [ -d "$CONFIG_DIR" ]; then
+    # Config dir exists, update it
     gum spin --spinner dot --title "Updating config repository..." -- \
         git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
     gum style --foreground 42 "✓ Configuration repository updated"
 else
+    # Fresh install via curl | bash - clone the repo
     gum spin --spinner dot --title "Cloning config repository..." -- \
         git clone https://github.com/craftcodery/northbuilt-workstation-config.git "$CONFIG_DIR"
     gum style --foreground 42 "✓ Configuration repository cloned"
@@ -300,7 +317,7 @@ gum style \
     --margin "0 0 1 0" \
     "Your workstation is now configured!" \
     "" \
-    "Test your AWS access:" \
+    "Test your NorthBuilt AWS access:" \
     "  aws sts get-caller-identity" \
     "" \
     "Use a client profile:" \
