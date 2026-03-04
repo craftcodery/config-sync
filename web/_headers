@@ -1,0 +1,13 @@
+# Cloudflare Pages headers
+# Serve the install script as text/plain so curl works correctly
+# Browsers will still render the HTML from the heredoc
+
+/install
+  Content-Type: text/plain; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=300
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
