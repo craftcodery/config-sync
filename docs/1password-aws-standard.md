@@ -11,23 +11,52 @@ This document defines the standard format for storing AWS IAM credentials in 1Pa
 
 ## Item Structure
 
-### Required Fields
+Each 1Password entry stores **both** console login credentials AND programmatic access keys. This allows a single entry to serve both human logins (with browser autofill) and CLI automation.
+
+### Console Credentials (built-in fields, for browser autofill)
+
+| Field | Description |
+|-------|-------------|
+| `username` | IAM username for AWS Console login |
+| `password` | Password for AWS Console login |
+
+These are the default fields in a Login item. 1Password browser extension will autofill these on the AWS sign-in page.
+
+### Programmatic Access Keys (required for CLI)
 
 | Field Type | Label | Description |
 |------------|-------|-------------|
-| **Username** | `Access Key ID` | The AWS Access Key ID (starts with `AKIA...`) |
-| **Password** | `Secret Access Key` | The AWS Secret Access Key |
+| **Text** | `Access Key ID` | The AWS Access Key ID (starts with `AKIA...`) |
+| **Text** | `Secret Access Key` | The AWS Secret Access Key (40 characters) |
 
-### Optional Fields
+These must be added as separate text fields. The `aws-vault-1password` helper script uses these fields (not `username`/`password`).
+
+### Metadata Fields (optional)
 
 | Field Type | Label | Description |
 |------------|-------|-------------|
 | **One-Time Password** | (TOTP) | MFA authenticator secret for accounts requiring MFA |
 | **Text** | `AWS Account ID` | The 12-digit AWS account number |
-| **Text** | `IAM Username` | The IAM user name |
 | **Text** | `MFA Serial ARN` | Full ARN of the MFA device (for aws config) |
 | **Text** | `Region` | Default AWS region for this account |
 | **Notes** | | Any additional context about the account |
+
+### Important: Console Credentials vs Access Keys
+
+**These are NOT the same thing:**
+
+| Credential Type | Purpose | Format |
+|-----------------|---------|--------|
+| Console Username/Password | Human login to AWS Console via browser | Any username + password |
+| Access Key ID / Secret Access Key | Programmatic CLI/API access | `AKIA...` + 40-char secret |
+
+The `aws-vault-1password` helper script **only uses Access Key ID and Secret Access Key**. Console credentials are stored for human reference but are not used by the automation.
+
+To get programmatic access keys:
+1. Log into AWS Console with Console Username/Password
+2. Go to IAM → Users → [Username] → Security credentials
+3. Create access key → Choose "Command Line Interface (CLI)"
+4. Copy the Access Key ID and Secret Access Key to 1Password
 
 ## Naming Convention
 
@@ -51,40 +80,49 @@ Store AWS credentials in the **client/project-specific vault** where the item re
 
 ## Creating a New AWS Credential Entry
 
-### Step 1: In 1Password, Create New Item
+### Step 1: Create New Login Item
 
 1. Click **+ New Item**
-2. Select **Login** (or **API Credential** if available)
+2. Select **Login**
 3. Name it following the convention: `AWS - [Client Name]`
 
-### Step 2: Fill Required Fields
+### Step 2: Fill Console Credentials (built-in fields)
 
-1. **Username field:**
-   - Click the field label "username"
-   - Rename it to `Access Key ID`
-   - Enter the Access Key ID (e.g., `AKIAIOSFODNN7EXAMPLE`)
+Use the default `username` and `password` fields for console login:
 
-2. **Password field:**
-   - Click the field label "password"
-   - Rename it to `Secret Access Key`
-   - Enter the Secret Access Key
+1. **username**: Enter the IAM username
+2. **password**: Enter the console login password
 
-### Step 3: Add MFA (If Required)
+These enable browser autofill on the AWS sign-in page.
+
+### Step 3: Add Programmatic Access Keys (Required for CLI)
+
+Add these as separate text fields for CLI automation:
+
+1. Click **+ Add More** → **Text**
+2. Label: `Access Key ID`
+3. Value: The AWS access key (e.g., `AKIAIOSFODNN7EXAMPLE`)
+
+4. Click **+ Add More** → **Text**
+5. Label: `Secret Access Key`
+6. Value: The 40-character secret key
+
+**Where to get access keys:** AWS Console → IAM → Users → [Username] → Security credentials → Create access key
+
+### Step 4: Add MFA (If Required)
 
 1. Click **+ Add More**
 2. Select **One-Time Password**
 3. Scan QR code or enter TOTP secret from AWS
 
-### Step 4: Add Metadata Fields
+### Step 5: Add Metadata Fields
 
 1. Click **+ Add More** → **Text**
 2. Add fields for:
    - `AWS Account ID`: The 12-digit account number
-   - `IAM Username`: The IAM user name
-   - `MFA Serial ARN`: `arn:aws:iam::[ACCOUNT_ID]:mfa/[USERNAME]`
-   - `Region`: Default region (e.g., `us-east-1`)
+   - `MFA Serial ARN`: `arn:aws:iam::[ACCOUNT_ID]:mfa/[MFA_DEVICE_NAME]`
 
-### Step 5: Save
+### Step 6: Save
 
 Save the item in the appropriate vault.
 
@@ -95,24 +133,59 @@ Title: AWS - Donate For Dough
 Vault: Donate For Dough
 
 Fields:
-  Access Key ID:     AKIAIOSFODNN7EXAMPLE
-  Secret Access Key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  # Built-in fields (for browser autofill on AWS Console)
+  username:          Borthbuilt
+  password:          ●●●●●●●●●●●●
+
+  # Programmatic access (used by aws-vault-1password)
+  Access Key ID:     AKIAUMWXUEIRD4PRWMUX
+  Secret Access Key: ●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●
+
+  # MFA (used by both console and CLI)
   One-Time Password: ●●●●●● (TOTP configured)
-  AWS Account ID:    123456789012
-  IAM Username:      northbuilt-support
-  MFA Serial ARN:    arn:aws:iam::123456789012:mfa/northbuilt-support
-  Region:            us-east-1
+
+  # Metadata
+  AWS Account ID:    302173659682
+  MFA Serial ARN:    arn:aws:iam::302173659682:mfa/1Password
 ```
+
+**Key points:**
+- `username`/`password` = Console login (browser autofill)
+- `Access Key ID`/`Secret Access Key` = CLI automation (aws-vault-1password)
+- These are different credentials and both are needed
 
 ## Updating Existing Entries
 
 For existing AWS entries that don't follow this standard:
 
-1. Open the item in 1Password
-2. Rename the `username` field to `Access Key ID`
-3. Rename the `password` field to `Secret Access Key`
-4. Add missing metadata fields
-5. Ensure TOTP is configured if MFA is required
+### If the entry only has console credentials (no access keys):
+
+1. **Keep `username`/`password`** as-is (for browser autofill)
+2. **Generate programmatic access keys:**
+   - Log into AWS Console using the existing credentials
+   - Go to IAM → Users → [Username] → Security credentials
+   - Click "Create access key" → Select "Command Line Interface (CLI)"
+   - Copy both values before closing the dialog (you can't see the secret again)
+3. **Add the access keys to 1Password:**
+   - Add text field `Access Key ID` with the access key (starts with `AKIA`)
+   - Add text field `Secret Access Key` with the 40-character secret
+4. Ensure TOTP is configured if MFA is required
+
+### If the entry has access keys in `username`/`password` fields:
+
+This is wrong - those fields should have console credentials for browser autofill.
+
+1. Note down the access key values
+2. Replace `username` with the IAM username (for console login)
+3. Replace `password` with the console password
+4. Add text field `Access Key ID` with the access key
+5. Add text field `Secret Access Key` with the secret key
+
+### Validate after updating:
+
+```bash
+aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
+```
 
 ## AWS Config Integration
 
@@ -148,7 +221,26 @@ Ensure field labels match exactly:
 - `Access Key ID` (not `access_key_id` or `Username`)
 - `Secret Access Key` (not `secret_access_key` or `Password`)
 
-The helper script also accepts legacy labels (`username`, `password`) for backwards compatibility.
+**Important:** The script does NOT use `username` or `password` fields. Those are reserved for console login credentials (for browser autofill). You must have separate text fields labeled `Access Key ID` and `Secret Access Key`.
+
+Run validation to diagnose issues:
+```bash
+aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
+```
+
+### Access Key ID doesn't look like an AWS key
+
+If you see this warning, the `Access Key ID` field contains console login credentials instead of an actual AWS access key.
+
+AWS access keys:
+- Start with `AKIA` (IAM user key) or `ASIA` (temporary/STS key)
+- Are exactly 20 characters
+
+To fix:
+1. Log into AWS Console with the console credentials
+2. Go to IAM → Users → [Username] → Security credentials
+3. Create a new access key for CLI use
+4. Update the 1Password entry with the new Access Key ID and Secret Access Key
 
 ### MFA not working
 
