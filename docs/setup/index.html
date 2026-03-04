@@ -1,190 +1,112 @@
-#!/bin/bash
-: <<'HTML_CONTENT'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NorthBuilt Workstation Setup</title>
-    <style>
-        /* Hide page until JS cleans up bash artifacts */
-        body { opacity: 0; transition: opacity 0.2s; }
-        body.loaded { opacity: 1; }
-        * { box-sizing: border-box; }
-        body.loaded {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #e4e4e7;
-            min-height: 100vh;
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container { max-width: 700px; width: 100%; }
-        .logo {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
-        .tagline { color: #a1a1aa; font-size: 1.1rem; margin-bottom: 2rem; }
-        .install-box {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .install-label { font-size: 0.875rem; color: #a1a1aa; margin-bottom: 0.75rem; }
-        .install-command { display: flex; align-items: center; gap: 1rem; }
-        .command {
-            flex: 1;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-            font-size: 1rem;
-            color: #60a5fa;
-            background: rgba(0,0,0,0.3);
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .copy-btn {
-            background: #60a5fa;
-            color: #1a1a2e;
-            border: none;
-            padding: 0.75rem 1.25rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.875rem;
-            transition: background 0.2s;
-            flex-shrink: 0;
-        }
-        .copy-btn:hover { background: #93c5fd; }
-        .copy-btn.copied { background: #34d399; }
-        .section { margin-bottom: 1.5rem; }
-        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: #f4f4f5; }
-        .checklist { list-style: none; padding: 0; margin: 0; }
-        .checklist li { padding: 0.5rem 0; padding-left: 1.75rem; position: relative; color: #a1a1aa; }
-        .checklist li::before { content: "✓"; position: absolute; left: 0; color: #34d399; font-weight: bold; }
-        .links { display: flex; gap: 1.5rem; margin-top: 2rem; }
-        .links a { color: #60a5fa; text-decoration: none; }
-        .links a:hover { text-decoration: underline; }
-        .prereq {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .prereq-title { color: #fbbf24; font-weight: 600; margin-bottom: 0.5rem; }
-        .prereq-content { color: #d4d4d8; font-size: 0.9rem; }
-        .footer {
-            margin-top: 3rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            color: #71717a;
-            font-size: 0.875rem;
-            text-align: center;
-        }
-        code {
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-            background: rgba(0,0,0,0.3);
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-        }
-        @media (max-width: 600px) {
-            .install-command { flex-direction: column; align-items: stretch; }
-            .command { font-size: 0.85rem; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="logo">NorthBuilt</div>
-        <div class="tagline">Workstation configuration in one command</div>
-        <div class="prereq">
-            <div class="prereq-title">Prerequisites</div>
-            <div class="prereq-content">
-                1Password desktop app installed with CLI integration enabled<br>
-                (Settings → Developer → Integrate with 1Password CLI)
-            </div>
-        </div>
-        <div class="install-box">
-            <div class="install-label">Run this in your terminal:</div>
-            <div class="install-command">
-                <code class="command" id="cmd">curl -fsSL https://setup.northbuilt.com | bash</code>
-                <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
-            </div>
-        </div>
-        <div class="section">
-            <div class="section-title">What this installs</div>
-            <ul class="checklist">
-                <li>Homebrew (if not installed)</li>
-                <li>AWS CLI, jq, gum, glow</li>
-                <li>1Password CLI integration</li>
-                <li>AWS credential helper (uses 1Password)</li>
-                <li>Hourly config sync service</li>
-            </ul>
-        </div>
-        <div class="section">
-            <div class="section-title">After setup</div>
-            <div class="section-content" style="color: #a1a1aa;">
-                Test your access with: <code>aws sts get-caller-identity</code>
-            </div>
-        </div>
-        <div class="links">
-            <a href="https://github.com/craftcodery/northbuilt-workstation-config">View Source</a>
-            <a href="https://github.com/craftcodery/northbuilt-workstation-config#readme">Documentation</a>
-        </div>
-        <div class="footer">CraftCodery · NorthBuilt</div>
-    </div>
-    <script>
-        // Remove bash script artifacts (text nodes) from the DOM
-        (function() {
-            function cleanup() {
-                // Remove all text nodes that are direct children of body
-                Array.from(document.body.childNodes).forEach(function(node) {
-                    if (node.nodeType === 3) node.remove();
-                });
-                // Remove text nodes from html level too
-                Array.from(document.documentElement.childNodes).forEach(function(node) {
-                    if (node.nodeType === 3) node.remove();
-                });
-                document.body.classList.add('loaded');
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', cleanup);
-            } else {
-                cleanup();
-            }
-        })();
-        function copyCommand(btn) {
-            navigator.clipboard.writeText(document.getElementById('cmd').textContent);
-            btn.textContent = 'Copied!';
-            btn.classList.add('copied');
-            setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-        }
-    </script>
-</body>
-</html>
-HTML_CONTENT
+#!/usr/bin/env bash
 
-# =============================================================================
-# NORTHBUILT WORKSTATION SETUP
-# =============================================================================
-# This file is both a webpage AND a bash script.
-# - Browsers render the HTML above (JS cleans up the bash parts)
-# - curl | bash executes the script below (bash ignores the HTML heredoc)
-# =============================================================================
+## <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+## <style>
+##   body {
+##     background-color: #1e1e1e;
+##     color: #d4d4d4;
+##     font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+##     font-size: 14px;
+##     line-height: 1.6;
+##     padding: 2rem;
+##     margin: 0;
+##     white-space: pre-wrap;
+##     word-wrap: break-word;
+##   }
+##   .header {
+##     background: linear-gradient(90deg, #60a5fa, #a78bfa);
+##     -webkit-background-clip: text;
+##     -webkit-text-fill-color: transparent;
+##     background-clip: text;
+##     font-size: 1.5em;
+##     font-weight: bold;
+##     margin-bottom: 1rem;
+##   }
+##   .copy-hint {
+##     position: fixed;
+##     top: 1rem;
+##     right: 1rem;
+##     background: #60a5fa;
+##     color: #1e1e1e;
+##     padding: 0.5rem 1rem;
+##     border-radius: 6px;
+##     font-family: -apple-system, sans-serif;
+##     font-size: 13px;
+##     cursor: pointer;
+##     z-index: 100;
+##   }
+##   .copy-hint:hover { background: #93c5fd; }
+##   code[class*="language-"], pre[class*="language-"] {
+##     background: transparent !important;
+##     text-shadow: none !important;
+##   }
+## </style>
+## <script>
+##   document.addEventListener('DOMContentLoaded', function() {
+##     // Get the raw text content
+##     var content = document.body.textContent;
+##
+##     // Create highlighted code block
+##     var pre = document.createElement('pre');
+##     var code = document.createElement('code');
+##     code.className = 'language-bash';
+##     code.textContent = content;
+##     pre.appendChild(code);
+##
+##     // Create copy button
+##     var btn = document.createElement('div');
+##     btn.className = 'copy-hint';
+##     btn.textContent = 'Copy install command';
+##     btn.onclick = function() {
+##       navigator.clipboard.writeText('curl -fsSL https://setup.northbuilt.com | bash');
+##       btn.textContent = 'Copied!';
+##       setTimeout(function() { btn.textContent = 'Copy install command'; }, 2000);
+##     };
+##
+##     // Replace body content
+##     document.body.innerHTML = '';
+##     document.body.appendChild(btn);
+##     document.body.appendChild(pre);
+##
+##     // Apply syntax highlighting
+##     Prism.highlightElement(code);
+##   });
+## </script>
+
+: ==========================================
+:   NorthBuilt Workstation Setup
+: ==========================================
+
+# This script configures your MacBook for NorthBuilt development.
+# Run it with:
+#
+:   curl -fsSL https://setup.northbuilt.com | bash
+#
+# Prerequisites:
+#   - 1Password desktop app installed
+#   - 1Password CLI integration enabled
+#     (Settings → Developer → Integrate with 1Password CLI)
+#
+# What this installs:
+#   - Homebrew (if not installed)
+#   - AWS CLI, jq, gum, glow
+#   - 1Password CLI integration
+#   - AWS credential helper (uses 1Password)
+#   - Hourly config sync service
+#
+# Source code:
+#   https://github.com/craftcodery/northbuilt-workstation-config
+#
+
+: ==========================================
+:   Script Start
+: ==========================================
 
 set -euo pipefail
 
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -197,20 +119,22 @@ echo -e "${BLUE}║${NC}           ${GREEN}NorthBuilt Workstation Setup${NC}    
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# =============================================================================
-# Phase 1: Install Homebrew
-# =============================================================================
+: ------------------------------------------
+:   Phase 1: Install Homebrew
+: ------------------------------------------
 
 if ! command -v brew &> /dev/null; then
     echo -e "${YELLOW}▶ Installing Homebrew...${NC}"
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+    # Add Homebrew to PATH for this session
     if [[ -f /opt/homebrew/bin/brew ]]; then
         eval "$(/opt/homebrew/bin/brew shellenv)"
     elif [[ -f /usr/local/bin/brew ]]; then
         eval "$(/usr/local/bin/brew shellenv)"
     fi
 
+    # Add to shell profile for future sessions
     SHELL_PROFILE=""
     if [[ -f "$HOME/.zshrc" ]]; then
         SHELL_PROFILE="$HOME/.zshrc"
@@ -232,19 +156,19 @@ else
     echo -e "${GREEN}✓ Homebrew already installed${NC}"
 fi
 
-# =============================================================================
-# Phase 2: Install gum
-# =============================================================================
+: ------------------------------------------
+:   Phase 2: Install gum
+: ------------------------------------------
 
 if ! command -v gum &> /dev/null; then
-    echo -e "${YELLOW}▶ Installing gum (CLI toolkit)...${NC}"
+    echo -e "${YELLOW}▶ Installing gum...${NC}"
     brew install gum > /dev/null 2>&1
     echo -e "${GREEN}✓ gum installed${NC}"
 fi
 
-# =============================================================================
-# Phase 3: Install tools with gum UI
-# =============================================================================
+: ------------------------------------------
+:   Phase 3: Install tools
+: ------------------------------------------
 
 gum style \
     --border rounded \
@@ -260,9 +184,9 @@ gum spin --spinner dot --title "Installing 1Password CLI..." -- brew install --c
 
 gum style --foreground 42 "✓ All tools installed"
 
-# =============================================================================
-# Phase 4: Verify 1Password CLI
-# =============================================================================
+: ------------------------------------------
+:   Phase 4: Verify 1Password CLI
+: ------------------------------------------
 
 gum style \
     --border rounded \
@@ -291,9 +215,9 @@ fi
 
 gum style --foreground 42 "✓ 1Password CLI connected"
 
-# =============================================================================
-# Phase 5: Configure OP_ACCOUNT
-# =============================================================================
+: ------------------------------------------
+:   Phase 5: Configure OP_ACCOUNT
+: ------------------------------------------
 
 SHELL_PROFILE=""
 if [[ -f "$HOME/.zshrc" ]]; then
@@ -328,9 +252,9 @@ else
     fi
 fi
 
-# =============================================================================
-# Phase 6: Set up configuration repository
-# =============================================================================
+: ------------------------------------------
+:   Phase 6: Set up config repository
+: ------------------------------------------
 
 CONFIG_DIR="$HOME/.craftcodery-config"
 
@@ -341,9 +265,11 @@ gum style \
     --margin "1 0" \
     "Setting up configuration repository..."
 
+# Detect if running from within the repo (local development)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sync.sh" ] && [ -f "$SCRIPT_DIR/bin/aws-vault-1password" ]; then
+    # Running from within the repo - symlink it
     if [ "$SCRIPT_DIR" != "$CONFIG_DIR" ]; then
         rm -rf "$CONFIG_DIR" 2>/dev/null || true
         ln -sf "$SCRIPT_DIR" "$CONFIG_DIR"
@@ -354,18 +280,20 @@ if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sync.sh" ] && [ -f "$SCRIPT_DIR/bin
         gum style --foreground 42 "✓ Configuration repository updated"
     fi
 elif [ -d "$CONFIG_DIR" ]; then
+    # Config dir exists, update it
     gum spin --spinner dot --title "Updating config repository..." -- \
         git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
     gum style --foreground 42 "✓ Configuration repository updated"
 else
+    # Fresh install - clone the repo
     gum spin --spinner dot --title "Cloning config repository..." -- \
         git clone https://github.com/craftcodery/northbuilt-workstation-config.git "$CONFIG_DIR"
     gum style --foreground 42 "✓ Configuration repository cloned"
 fi
 
-# =============================================================================
-# Phase 7: Deploy configurations
-# =============================================================================
+: ------------------------------------------
+:   Phase 7: Deploy configurations
+: ------------------------------------------
 
 gum style \
     --border rounded \
@@ -380,9 +308,9 @@ gum spin --spinner dot --title "Deploying AWS config and helper scripts..." -- \
 
 gum style --foreground 42 "✓ Configurations deployed"
 
-# =============================================================================
-# Phase 8: Set up launchd service
-# =============================================================================
+: ------------------------------------------
+:   Phase 8: Set up launchd service
+: ------------------------------------------
 
 gum style \
     --border rounded \
@@ -448,9 +376,9 @@ launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
 
 gum style --foreground 42 "✓ Automatic sync service configured (runs hourly)"
 
-# =============================================================================
-# Complete!
-# =============================================================================
+: ==========================================
+:   Setup Complete
+: ==========================================
 
 echo ""
 gum style \

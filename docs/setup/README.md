@@ -4,16 +4,14 @@ GitHub Pages site for the NorthBuilt workstation setup.
 
 ## How It Works
 
-The `index.html` file is **both** a webpage AND a bash script:
+The `index.html` file is **both** a webpage AND a bash script, using the same approach as [firebase.tools](https://firebase.tools):
 
-- **Browsers** render the HTML (JavaScript cleans up the bash artifacts)
-- **`curl | bash`** executes the script (bash ignores the HTML via heredoc)
-
-This is similar to how [firebase.tools](https://firebase.tools) works.
+- **Browsers** see the script with syntax highlighting (via Prism.js)
+- **`curl | bash`** executes the script directly
 
 ## Files
 
-- `index.html` - Dual-purpose: landing page + setup script
+- `index.html` - Dual-purpose: syntax-highlighted script + executable bash
 - `CNAME` - Custom domain configuration
 
 ## Setup
@@ -42,7 +40,7 @@ GitHub automatically provisions an SSL certificate (may take a few minutes).
 
 ## Usage
 
-**Browser:** Visit https://setup.northbuilt.com
+**Browser:** Visit https://setup.northbuilt.com to see the script with syntax highlighting.
 
 **Terminal:**
 ```bash
@@ -51,20 +49,23 @@ curl -fsSL https://setup.northbuilt.com | bash
 
 ## Technical Details
 
-The file structure:
+The file structure follows the firebase.tools pattern:
 
 ```bash
-#!/bin/bash
-: <<'HTML_CONTENT'
-<!DOCTYPE html>
-<html>... (full HTML page) ...</html>
-HTML_CONTENT
+#!/usr/bin/env bash
 
-# Actual bash script here
+## <style>...</style>
+## <script>...</script>
+: ==========================================
+:   Section Header
+: ==========================================
+
+# Regular comments
 set -euo pipefail
 ...
 ```
 
-- The `: <<'HTML_CONTENT'` is a bash heredoc that discards its content
-- Browsers see `#!/bin/bash` and `: <<'HTML_CONTENT'` as text, but JavaScript removes these text nodes
-- The page is hidden (`opacity: 0`) until JS cleanup completes, then fades in
+- `##` lines are bash comments that contain HTML/CSS/JS - browsers parse the tags
+- `:` is a bash no-op - used for readable section headers
+- Prism.js provides syntax highlighting in the browser
+- The script is fully visible and transparent
