@@ -78,7 +78,6 @@ gum style \
 
 # Install all tools with spinner
 gum spin --spinner dot --title "Installing AWS CLI..." -- brew install awscli 2>/dev/null || true
-gum spin --spinner dot --title "Installing aws-vault..." -- brew install aws-vault 2>/dev/null || true
 gum spin --spinner dot --title "Installing jq..." -- brew install jq 2>/dev/null || true
 gum spin --spinner dot --title "Installing glow..." -- brew install glow 2>/dev/null || true
 gum spin --spinner dot --title "Installing 1Password CLI..." -- brew install --cask 1password-cli 2>/dev/null || true
@@ -117,7 +116,7 @@ fi
 gum style --foreground 42 "✓ 1Password CLI connected"
 
 # =============================================================================
-# Phase 3.5: Configure OP_ACCOUNT for 1Password multi-account support
+# Phase 4: Configure OP_ACCOUNT for 1Password multi-account support
 # =============================================================================
 
 # Determine shell profile
@@ -142,7 +141,7 @@ if [ -z "${OP_ACCOUNT:-}" ] && [ -n "$SHELL_PROFILE" ]; then
 
         # Add OP_ACCOUNT to shell profile
         echo '' >> "$SHELL_PROFILE"
-        echo '# 1Password account for AWS credential helper' >> "$SHELL_PROFILE"
+        echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
         echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
 
         # Export for current session
@@ -159,7 +158,7 @@ else
 fi
 
 # =============================================================================
-# Phase 4: Clone/update configuration repository
+# Phase 5: Clone/update configuration repository
 # =============================================================================
 
 CONFIG_DIR="$HOME/.craftcodery-config"
@@ -182,7 +181,7 @@ else
 fi
 
 # =============================================================================
-# Phase 5: Deploy configurations
+# Phase 6: Deploy configurations
 # =============================================================================
 
 gum style \
@@ -195,26 +194,89 @@ gum style \
 # Make sync script executable and run it
 chmod +x "$CONFIG_DIR/sync.sh"
 gum spin --spinner dot --title "Deploying AWS config and helper scripts..." -- \
-    env CONFIG_DIR="$CONFIG_DIR" "$CONFIG_DIR/sync.sh"
+    env CONFIG_DIR="$CONFIG_DIR" OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
 
 gum style --foreground 42 "✓ Configurations deployed"
 
 # =============================================================================
-# Phase 6: Set up automatic sync via launchd
+# Phase 7: Set up automatic sync via launchd
 # =============================================================================
+
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Setting up automatic sync service..."
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
 PLIST_NAME="com.craftcodery.config-sync.plist"
+LOG_DIR="$HOME/Library/Logs"
+
 mkdir -p "$LAUNCHD_DIR"
+mkdir -p "$LOG_DIR"
 
 # Unload existing agent if present
 launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
 
-# Copy and load new agent
-cp "$CONFIG_DIR/launchd/$PLIST_NAME" "$LAUNCHD_DIR/"
+# Generate plist with absolute paths (launchd doesn't expand $HOME)
+cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.craftcodery.config-sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-l</string>
+        <string>-c</string>
+        <string>$HOME/.craftcodery-config/sync.sh --launchd</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>$HOME</string>
+        <key>OP_ACCOUNT</key>
+        <string>craftcodery.1password.com</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>$HOME</string>
+
+    <key>StandardOutPath</key>
+    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+</dict>
+</plist>
+EOF
+
+# Load the agent
 launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
 
-gum style --foreground 42 "✓ Automatic sync configured (every 4 hours)"
+gum style --foreground 42 "✓ Automatic sync service configured (runs hourly)"
 
 # =============================================================================
 # Complete!
@@ -236,24 +298,20 @@ gum style \
     --border-foreground 39 \
     --padding "1 2" \
     --margin "0 0 1 0" \
-    "Next steps:" \
+    "Your workstation is now configured!" \
     "" \
-    "  1. Run 'aws sso login' to authenticate with NorthBuilt AWS" \
-    "  2. Test with 'aws sts get-caller-identity'" \
-    "  3. For client accounts: 'aws s3 ls --profile client-acme'" \
+    "Test your AWS access:" \
+    "  aws sts get-caller-identity" \
     "" \
-    "  Configurations will sync automatically every 4 hours." \
-    "  View docs: glow ~/.craftcodery-config/README.md"
-
-# Offer to run initial SSO login
-echo ""
-if gum confirm "Would you like to authenticate with NorthBuilt AWS now?"; then
-    echo ""
-    aws sso login
-    echo ""
-    gum style --foreground 42 "✓ Authenticated with NorthBuilt AWS"
-fi
+    "Use a client profile:" \
+    "  aws sts get-caller-identity --profile donatefordough" \
+    "" \
+    "Sync runs automatically every hour." \
+    "Manual sync: ~/.craftcodery-config/sync.sh" \
+    "View logs:   cat ~/Library/Logs/craftcodery-config-sync.log" \
+    "" \
+    "Documentation: glow ~/.craftcodery-config/README.md"
 
 echo ""
-gum style --foreground 245 "Happy building!"
+gum style --foreground 245 "Happy building! 🚀"
 echo ""
