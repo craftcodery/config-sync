@@ -39,10 +39,10 @@ log() {
     local message="$2"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local line="[$timestamp] [$level] $message"
-    echo "$line" >> "$LOG_FILE"
-    echo "$line"
+    echo "[$timestamp] [$level] $message"
 }
+# Note: launchd redirects stdout to LOG_FILE via StandardOutPath.
+# Manual runs just print to terminal.
 
 log_info() { log "INFO" "$1"; }
 log_debug() { log "DEBUG" "$1"; }
