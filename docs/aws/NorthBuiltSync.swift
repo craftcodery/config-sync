@@ -122,7 +122,7 @@ actor SyncEngine {
     private let opCLI = OnePasswordCLI()
 
     func sync() async -> SyncResult {
-        logger.info("Starting sync")
+        logger.notice("Starting sync")
 
         do {
             // Ensure directories exist
@@ -134,14 +134,14 @@ actor SyncEngine {
 
             // Check 1Password authentication
             try await opCLI.checkAuthenticated()
-            logger.info("1Password authenticated")
+            logger.notice("1Password authenticated")
 
             // Helper path (installed during setup, not updated during sync)
             let helperPath = Config.configDir.appendingPathComponent(Config.helperName)
 
             // Download AWS config template
             let configTemplate = try await downloadString(from: "\(Config.baseURL)/aws-config")
-            logger.info("Downloaded aws-config template")
+            logger.notice("Downloaded aws-config template")
 
             // Security: Validate config template before substitution
             // Reject configs containing shell commands or suspicious patterns
@@ -179,7 +179,7 @@ actor SyncEngine {
                 }
             }
 
-            logger.info("Found \(placeholders.count) MFA placeholders")
+            logger.notice("Found \(placeholders.count) MFA placeholders")
 
             // Fetch MFA serials in parallel
             var mfaSuccess = 0
@@ -201,7 +201,7 @@ actor SyncEngine {
                     if let serial = serial {
                         config = config.replacingOccurrences(of: placeholder, with: serial)
                         mfaSuccess += 1
-                        logger.info("Substituted MFA serial for placeholder")
+                        logger.notice("Substituted MFA serial for placeholder")
                     }
                 }
             }
@@ -220,7 +220,7 @@ actor SyncEngine {
             // Write config
             try config.write(to: Config.awsConfigPath, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: Config.awsConfigPath.path)
-            logger.info("Deployed ~/.aws/config")
+            logger.notice("Deployed ~/.aws/config")
 
             return SyncResult(
                 success: true,
@@ -425,10 +425,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func viewLogsClicked() {
-        // Open Console.app with filter for our subsystem
+        // Show logs in Terminal using the log command
         let script = """
-        tell application "Console"
+        tell application "Terminal"
             activate
+            do script "log show --last 1h --predicate 'subsystem == \"com.northbuilt.sync\"' --style compact"
         end tell
         """
 
@@ -436,13 +437,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             var error: NSDictionary?
             appleScript.executeAndReturnError(&error)
         }
-
-        // Also show a notification about how to filter
-        let alert = NSAlert()
-        alert.messageText = "View Logs"
-        alert.informativeText = "Console.app opened. Filter by subsystem:\ncom.northbuilt.sync"
-        alert.alertStyle = .informational
-        alert.runModal()
     }
 
     @objc private func openConfigClicked() {
