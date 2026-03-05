@@ -40,17 +40,36 @@ set -euo pipefail
 BASE_URL="https://setup.northbuilt.com/aws"
 CONFIG_DIR="$HOME/.northbuilt/aws"
 
-# Brand colors
-TEAL="39"
+# Brand colors (256-color palette)
+TEAL="38"
+TEAL_DARK="30"
 GREEN="42"
+GREEN_LIGHT="49"
 RED="196"
+YELLOW="220"
+GRAY="245"
+WHITE="255"
+
+# Hex colors for backgrounds
+HEX_TEAL="#00a5a5"
+HEX_TEAL_DARK="#1a5c5c"
+HEX_GREEN="#00d787"
+HEX_RED="#ff0000"
 
 # ANSI fallback colors
-ANSI_TEAL='\033[38;5;39m'
+ANSI_TEAL='\033[38;5;38m'
 ANSI_GREEN='\033[38;5;42m'
 ANSI_RED='\033[38;5;196m'
+ANSI_YELLOW='\033[38;5;220m'
+ANSI_GRAY='\033[38;5;245m'
 ANSI_BOLD='\033[1m'
+ANSI_DIM='\033[2m'
+ANSI_ITALIC='\033[3m'
 ANSI_RESET='\033[0m'
+
+# Progress tracking
+CURRENT_STEP=0
+TOTAL_STEPS=8
 
 : ------------------------------------------
 :   Display Functions (with gum fallback)
@@ -61,17 +80,19 @@ has_gum() {
     command -v gum &> /dev/null
 }
 
-# Display the ASCII art logo
+# Display the ASCII art logo with animated styling
 show_logo() {
+    clear
     echo ""
     if has_gum; then
-        gum style \
-            --foreground 255 \
-            --background "#1a5c5c" \
+        # Create the main logo block
+        local logo
+        logo=$(gum style \
+            --foreground "$WHITE" \
+            --background "$HEX_TEAL_DARK" \
             --border double \
             --border-foreground "$TEAL" \
-            --padding "1 2" \
-            --margin "0 1" \
+            --padding "1 3" \
             --bold \
             "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
             "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║" \
@@ -84,33 +105,82 @@ show_logo() {
             "██████╔╝██║   ██║██║██║     ██║             " \
             "██╔══██╗██║   ██║██║██║     ██║             " \
             "██████╔╝╚██████╔╝██║███████╗██║             " \
-            "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             "
-        gum style \
+            "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             ")
+
+        # Create the tagline with subtle styling
+        local tagline
+        tagline=$(gum style \
             --foreground "$TEAL" \
-            --margin "0 1" \
             --italic \
-            "AWS Config Sync"
+            --padding "0 2" \
+            "AWS Config Sync • Powered by 1Password")
+
+        # Join them vertically with alignment
+        gum join --vertical --align center "$logo" "$tagline"
     else
         echo -e "${ANSI_TEAL}${ANSI_BOLD}"
-        echo "  ███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗"
-        echo "  ████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║"
-        echo "  ██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║"
-        echo "  ██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║"
-        echo "  ██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║"
-        echo "  ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝"
-        echo "  ██████╗ ██╗   ██╗██╗██╗  ████████╗          "
-        echo "  ██╔══██╗██║   ██║██║██║  ╚══██╔══╝          "
-        echo "  ██████╔╝██║   ██║██║██║     ██║             "
-        echo "  ██╔══██╗██║   ██║██║██║     ██║             "
-        echo "  ██████╔╝╚██████╔╝██║███████╗██║             "
-        echo "  ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             "
+        echo "  ╔══════════════════════════════════════════════════╗"
+        echo "  ║  ███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗    ║"
+        echo "  ║  ████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║    ║"
+        echo "  ║  ██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║    ║"
+        echo "  ║  ██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║    ║"
+        echo "  ║  ██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║    ║"
+        echo "  ║  ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝    ║"
+        echo "  ║  ██████╗ ██╗   ██╗██╗██╗  ████████╗              ║"
+        echo "  ║  ██╔══██╗██║   ██║██║██║  ╚══██╔══╝              ║"
+        echo "  ║  ██████╔╝██║   ██║██║██║     ██║                 ║"
+        echo "  ║  ██╔══██╗██║   ██║██║██║     ██║                 ║"
+        echo "  ║  ██████╔╝╚██████╔╝██║███████╗██║                 ║"
+        echo "  ║  ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝                 ║"
+        echo "  ╚══════════════════════════════════════════════════╝"
         echo -e "${ANSI_RESET}"
-        echo -e "  ${ANSI_TEAL}AWS Config Sync${ANSI_RESET}"
+        echo -e "    ${ANSI_TEAL}${ANSI_ITALIC}AWS Config Sync • Powered by 1Password${ANSI_RESET}"
     fi
     echo ""
 }
 
-# Display a section header
+# Display a step header with progress indicator
+show_step() {
+    local title="$1"
+    ((CURRENT_STEP++))
+    echo ""
+    if has_gum; then
+        # Create step badge
+        local badge
+        badge=$(gum style \
+            --foreground "$WHITE" \
+            --background "$HEX_TEAL" \
+            --padding "0 1" \
+            --bold \
+            "STEP $CURRENT_STEP/$TOTAL_STEPS")
+
+        # Create title
+        local step_title
+        step_title=$(gum style \
+            --foreground "$WHITE" \
+            --bold \
+            --padding "0 1" \
+            "$title")
+
+        # Join horizontally
+        gum join --horizontal --align center "$badge" "$step_title"
+
+        # Draw a subtle progress bar
+        local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+        local filled=$((progress / 5))
+        local empty=$((20 - filled))
+        local bar=""
+        for ((i=0; i<filled; i++)); do bar+="█"; done
+        for ((i=0; i<empty; i++)); do bar+="░"; done
+        gum style --foreground "$TEAL" --faint "    $bar $progress%"
+    else
+        echo -e "  ${ANSI_TEAL}${ANSI_BOLD}[$CURRENT_STEP/$TOTAL_STEPS]${ANSI_RESET} ${ANSI_BOLD}$title${ANSI_RESET}"
+        local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+        echo -e "  ${ANSI_GRAY}Progress: $progress%${ANSI_RESET}"
+    fi
+}
+
+# Display a section header (smaller than step)
 show_section() {
     local message="$1"
     echo ""
@@ -120,6 +190,7 @@ show_section() {
             --border-foreground "$TEAL" \
             --padding "0 2" \
             --margin "0 1" \
+            --foreground "$WHITE" \
             "$message"
     else
         echo -e "  ${ANSI_TEAL}╭─────────────────────────────────────────╮${ANSI_RESET}"
@@ -128,7 +199,7 @@ show_section() {
     fi
 }
 
-# Display a success message
+# Display a success message with checkmark
 show_success() {
     local message="$1"
     if has_gum; then
@@ -138,13 +209,23 @@ show_success() {
     fi
 }
 
-# Display a progress message
-show_progress() {
+# Display an info message
+show_info() {
     local message="$1"
     if has_gum; then
-        gum style --foreground 255 --margin "0 1" "▶ $message"
+        gum style --foreground "$GRAY" --margin "0 1" --faint "  $message"
     else
-        echo -e "  ▶ $message"
+        echo -e "  ${ANSI_GRAY}$message${ANSI_RESET}"
+    fi
+}
+
+# Display a warning message
+show_warning() {
+    local message="$1"
+    if has_gum; then
+        gum style --foreground "$YELLOW" --margin "0 1" "⚠ $message"
+    else
+        echo -e "  ${ANSI_YELLOW}⚠ $message${ANSI_RESET}"
     fi
 }
 
@@ -152,20 +233,53 @@ show_progress() {
 show_error() {
     local message="$1"
     if has_gum; then
-        gum style --foreground "$RED" --margin "0 1" "✗ $message"
+        gum style --foreground "$RED" --margin "0 1" --bold "✗ $message"
     else
         echo -e "  ${ANSI_RED}✗ $message${ANSI_RESET}"
     fi
 }
 
-# Run a command with a spinner (or simple message if no gum)
-run_with_spinner() {
+# Run a command with animated spinner (different spinners for different operations)
+spin_download() {
     local title="$1"
     shift
     if has_gum; then
-        gum spin --spinner dot --title "$title" -- "$@"
+        gum spin --spinner globe --spinner.foreground "$TEAL" --title "$title" -- "$@"
     else
-        echo -e "  ▶ $title"
+        echo -e "  ${ANSI_TEAL}↓${ANSI_RESET} $title"
+        "$@"
+    fi
+}
+
+spin_process() {
+    local title="$1"
+    shift
+    if has_gum; then
+        gum spin --spinner dot --spinner.foreground "$TEAL" --title "$title" -- "$@"
+    else
+        echo -e "  ${ANSI_TEAL}•${ANSI_RESET} $title"
+        "$@"
+    fi
+}
+
+spin_install() {
+    local title="$1"
+    shift
+    if has_gum; then
+        gum spin --spinner meter --spinner.foreground "$TEAL" --title "$title" -- "$@"
+    else
+        echo -e "  ${ANSI_TEAL}▶${ANSI_RESET} $title"
+        "$@"
+    fi
+}
+
+spin_system() {
+    local title="$1"
+    shift
+    if has_gum; then
+        gum spin --spinner pulse --spinner.foreground "$GREEN" --title "$title" -- "$@"
+    else
+        echo -e "  ${ANSI_GREEN}◉${ANSI_RESET} $title"
         "$@"
     fi
 }
@@ -175,19 +289,80 @@ show_error_box() {
     echo ""
     if has_gum; then
         gum style \
-            --border rounded \
+            --border double \
             --border-foreground "$RED" \
             --foreground "$RED" \
             --padding "1 2" \
             --margin "0 1" \
+            --bold \
             "$@"
     else
-        echo -e "  ${ANSI_RED}╭─────────────────────────────────────────╮${ANSI_RESET}"
+        echo -e "  ${ANSI_RED}╔═════════════════════════════════════════════════╗${ANSI_RESET}"
         for line in "$@"; do
-            echo -e "  ${ANSI_RED}│${ANSI_RESET}  $line"
+            echo -e "  ${ANSI_RED}║${ANSI_RESET}  $line"
         done
-        echo -e "  ${ANSI_RED}╰─────────────────────────────────────────╯${ANSI_RESET}"
+        echo -e "  ${ANSI_RED}╚═════════════════════════════════════════════════╝${ANSI_RESET}"
     fi
+}
+
+# Display completion banner with summary
+show_completion() {
+    echo ""
+    if has_gum; then
+        # Create the celebration header
+        local header
+        header=$(gum style \
+            --foreground "$GREEN" \
+            --bold \
+            --align center \
+            "✓ Setup Complete!")
+
+        # Create info sections using join for layout
+        local info
+        info=$(gum style \
+            --foreground "$WHITE" \
+            --padding "1 0" \
+            "Look for the NorthBuilt icon in your menu bar." \
+            "" \
+            "$(gum style --foreground "$TEAL" --bold "Test your AWS access:")" \
+            "  $(gum style --foreground "$GRAY" "aws s3 ls")" \
+            "" \
+            "$(gum style --foreground "$TEAL" --bold "Use a client profile:")" \
+            "  $(gum style --foreground "$GRAY" "aws s3 ls --profile donatefordough")" \
+            "" \
+            "$(gum style --foreground "$TEAL" --bold "Sync schedule:")" \
+            "  $(gum style --foreground "$GRAY" "Automatic every hour, or click icon to sync now")" \
+            "" \
+            "$(gum style --foreground "$TEAL" --bold "Enable Launch at Login:")" \
+            "  $(gum style --foreground "$GRAY" "Click NorthBuilt icon → Launch at Login")")
+
+        # Join header and info, wrap in box
+        local content
+        content=$(gum join --vertical --align center "$header" "$info")
+
+        gum style \
+            --border double \
+            --border-foreground "$GREEN" \
+            --padding "1 3" \
+            --margin "0 1" \
+            "$content"
+    else
+        echo -e "  ${ANSI_GREEN}╔═══════════════════════════════════════════════════════╗${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_GREEN}${ANSI_BOLD}✓ Setup Complete!${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  Look for the NorthBuilt icon in your menu bar."
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Test your AWS access:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Use a client profile:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls --profile donatefordough"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Enable Launch at Login:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    Click NorthBuilt icon → Launch at Login"
+        echo -e "  ${ANSI_GREEN}╚═══════════════════════════════════════════════════════╝${ANSI_RESET}"
+    fi
+    echo ""
 }
 
 : ------------------------------------------
@@ -195,13 +370,16 @@ show_error_box() {
 : ------------------------------------------
 
 show_logo
+sleep 0.5
 
 : ------------------------------------------
 :   Phase 1: Install Homebrew
 : ------------------------------------------
 
+show_step "Installing Homebrew"
+
 if ! command -v brew &> /dev/null; then
-    show_progress "Installing Homebrew..."
+    show_info "Homebrew not found, installing..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     if [[ -f /opt/homebrew/bin/brew ]]; then
@@ -235,36 +413,45 @@ fi
 :   Phase 2: Install gum (enables pretty UI)
 : ------------------------------------------
 
+show_step "Installing UI toolkit"
+
 if ! has_gum; then
-    show_progress "Installing gum..."
-    brew install gum > /dev/null 2>&1
-    show_success "gum installed"
+    spin_install "Installing gum..." brew install gum > /dev/null 2>&1
+    show_success "gum installed - UI enhanced!"
+else
+    show_success "gum already installed"
 fi
 
 : ------------------------------------------
 :   Phase 3: Install tools
 : ------------------------------------------
 
-show_section "Installing required tools..."
+show_step "Installing CLI tools"
 
-run_with_spinner "Installing AWS CLI..." brew install awscli 2>/dev/null || true
-run_with_spinner "Installing jq..." brew install jq 2>/dev/null || true
-run_with_spinner "Installing glow..." brew install glow 2>/dev/null || true
-run_with_spinner "Installing 1Password CLI..." brew install --cask 1password-cli 2>/dev/null || true
+spin_install "Installing AWS CLI..." bash -c "brew install awscli 2>/dev/null || true"
+show_success "AWS CLI ready"
 
-show_success "All tools installed"
+spin_install "Installing jq..." bash -c "brew install jq 2>/dev/null || true"
+show_success "jq ready"
+
+spin_install "Installing glow..." bash -c "brew install glow 2>/dev/null || true"
+show_success "glow ready"
+
+spin_install "Installing 1Password CLI..." bash -c "brew install --cask 1password-cli 2>/dev/null || true"
+show_success "1Password CLI ready"
 
 : ------------------------------------------
 :   Phase 4: Verify 1Password CLI
 : ------------------------------------------
 
-show_section "Verifying 1Password CLI..."
+show_step "Verifying 1Password"
 
 if ! op account list &> /dev/null; then
     show_error_box \
-        "1Password CLI needs to be connected to the 1Password app." \
+        "⚠ 1Password CLI needs to be connected" \
         "" \
         "Please complete these steps:" \
+        "" \
         "  1. Open 1Password app" \
         "  2. Go to Settings → Developer" \
         "  3. Enable 'Integrate with 1Password CLI'" \
@@ -278,6 +465,8 @@ show_success "1Password CLI connected"
 : ------------------------------------------
 :   Phase 5: Configure OP_ACCOUNT
 : ------------------------------------------
+
+show_step "Configuring environment"
 
 # Determine shell profile (create .zshrc if none exists)
 SHELL_PROFILE=""
@@ -307,28 +496,30 @@ if ! grep -q ".northbuilt/aws" "$SHELL_PROFILE" 2>/dev/null; then
     echo '' >> "$SHELL_PROFILE"
     echo '# NorthBuilt AWS tools' >> "$SHELL_PROFILE"
     echo 'export PATH="$HOME/.northbuilt/aws:$PATH"' >> "$SHELL_PROFILE"
+    show_success "PATH updated"
+else
+    show_success "PATH already configured"
 fi
 
 : ------------------------------------------
 :   Phase 6: Build Swift applications
 : ------------------------------------------
 
-show_section "Building native applications..."
+show_step "Building native apps"
 
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$HOME/.aws"
 
 # Download and compile credential helper
-run_with_spinner "Downloading credential helper source..." \
+spin_download "Downloading credential helper..." \
     curl -fsSL "$BASE_URL/aws-vault-1password.swift" -o "$CONFIG_DIR/aws-vault-1password.swift"
 
-run_with_spinner "Compiling credential helper..." \
+spin_process "Compiling credential helper..." \
     swiftc -O -o "$CONFIG_DIR/aws-vault-1password" "$CONFIG_DIR/aws-vault-1password.swift"
 
 rm -f "$CONFIG_DIR/aws-vault-1password.swift"
 chmod +x "$CONFIG_DIR/aws-vault-1password"
-
-show_success "Credential helper compiled"
+show_success "Credential helper built"
 
 # Download and compile menu bar app
 APP_NAME="NorthBuiltSync"
@@ -337,10 +528,10 @@ APP_CONTENTS="$APP_DIR/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 
-run_with_spinner "Downloading menu bar app source..." \
+spin_download "Downloading menu bar app..." \
     curl -fsSL "$BASE_URL/NorthBuiltSync.swift" -o "$CONFIG_DIR/NorthBuiltSync.swift"
 
-run_with_spinner "Compiling menu bar app..." \
+spin_process "Compiling menu bar app..." \
     swiftc -O -o "$CONFIG_DIR/NorthBuiltSync" "$CONFIG_DIR/NorthBuiltSync.swift"
 
 # Create .app bundle structure
@@ -352,9 +543,9 @@ mv "$CONFIG_DIR/NorthBuiltSync" "$APP_MACOS/$APP_NAME"
 rm -f "$CONFIG_DIR/NorthBuiltSync.swift"
 
 # Download app icons
-run_with_spinner "Downloading app icons..." \
+spin_download "Downloading icons..." \
     curl -fsSL "$BASE_URL/AppIcon.icns" -o "$APP_RESOURCES/AppIcon.icns"
-curl -fsSL "$BASE_URL/MenuBarIcon.png" -o "$APP_RESOURCES/MenuBarIcon.png"
+curl -fsSL "$BASE_URL/MenuBarIcon.png" -o "$APP_RESOURCES/MenuBarIcon.png" 2>/dev/null
 
 # Create Info.plist
 cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
@@ -391,18 +582,19 @@ PLIST
 show_success "Menu bar app built"
 
 : ------------------------------------------
-:   Phase 7: Remove old launchd service
+:   Phase 7: Cleanup old versions
 : ------------------------------------------
+
+show_step "Cleaning up"
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
 PLIST_NAME="com.northbuilt.aws-config-sync.plist"
 
 # Unload and remove old launchd service if it exists
 if [[ -f "$LAUNCHD_DIR/$PLIST_NAME" ]]; then
-    show_section "Migrating from launchd to menu bar app..."
     launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
     rm -f "$LAUNCHD_DIR/$PLIST_NAME"
-    show_success "Old launchd service removed"
+    show_success "Migrated from launchd"
 fi
 
 # Clean up legacy service names
@@ -411,55 +603,32 @@ for old_plist in "com.northbuilt.sync.plist" "com.northbuilt.config-sync.plist";
     rm -f "$LAUNCHD_DIR/$old_plist"
 done
 
-# Remove old sync.sh if it exists
+# Remove old files
 rm -f "$CONFIG_DIR/sync.sh"
-
-# Remove old NorthBuiltAWSSync app if it exists (renamed to NorthBuiltSync)
 rm -rf "$CONFIG_DIR/NorthBuiltAWSSync.app"
+
+show_success "Cleanup complete"
 
 : ------------------------------------------
 :   Phase 8: Launch menu bar app
 : ------------------------------------------
 
-show_section "Starting menu bar app..."
+show_step "Launching app"
 
-# Kill any existing instance (including old name)
+# Kill any existing instance
 pkill -f "NorthBuiltSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltAWSSync.app" 2>/dev/null || true
-sleep 1
+sleep 0.5
 
 # Launch the app
 open "$APP_DIR"
-
 show_success "Menu bar app launched"
 
 # Wait for initial sync
-run_with_spinner "Running initial sync..." sleep 5
+spin_system "Running initial sync..." sleep 3
 
 : ==========================================
 :   Setup Complete
 : ==========================================
 
-echo ""
-gum style \
-    --border double \
-    --border-foreground "$GREEN" \
-    --padding "1 2" \
-    --margin "0 1" \
-    --bold \
-    "✓ Setup Complete!" \
-    "" \
-    "Look for the NorthBuilt icon in your menu bar." \
-    "" \
-    "Test your AWS access:" \
-    "  aws s3 ls" \
-    "" \
-    "Use a client profile:" \
-    "  aws s3 ls --profile donatefordough" \
-    "" \
-    "The menu bar app syncs automatically every hour." \
-    "Click the NorthBuilt icon to sync manually or view status." \
-    "" \
-    "To enable Launch at Login:" \
-    "  Click NorthBuilt icon → Launch at Login"
-echo ""
+show_completion

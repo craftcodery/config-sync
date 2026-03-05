@@ -6,17 +6,34 @@ Output demo.gif
 
 Require gum
 
+# Shell and typography
 Set Shell "zsh"
-Set FontSize 13
-Set Width 680
-Set Height 750
-Set Theme "Catppuccin Mocha"
-Set Padding 15
-Set Framerate 24
-Set TypingSpeed 40ms
+Set FontFamily "JetBrains Mono"
+Set FontSize 14
+Set LetterSpacing 1
+Set LineHeight 1.4
+
+# Dimensions optimized for the tall logo
+Set Width 720
+Set Height 900
+Set Padding 25
+
+# Window styling for polished macOS look
+Set Margin 40
+Set MarginFill "#0f172a"
 Set WindowBar Colorful
 Set WindowBarSize 40
 Set BorderRadius 10
+
+# Color theme
+Set Theme "Catppuccin Mocha"
+Set CursorBlink false
+
+# Animation settings
+Set TypingSpeed 50ms
+Set Framerate 50
+Set PlaybackSpeed 1.0
+Set LoopOffset 60%
 
 # Setup clean environment
 Hide
@@ -24,11 +41,11 @@ Type "export PS1='$ ' && clear"
 Enter
 Show
 
-Sleep 500ms
+Sleep 400ms
 
-# Type the curl command
+# Type the install command (this is what users will see)
 Type "curl -fsSL https://setup.northbuilt.com/aws | bash"
-Sleep 600ms
+Sleep 500ms
 Enter
 
 # Hide the actual execution, run our mock instead
@@ -39,4 +56,4 @@ Enter
 Show
 
 # Wait for the mock script to complete
-Sleep 10s
+Sleep 12s

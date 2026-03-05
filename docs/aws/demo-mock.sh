@@ -1,22 +1,32 @@
 #!/usr/bin/env bash
-# Mock setup script for VHS demo - simulates the real setup experience
+# Mock setup script for VHS demo - simulates the enhanced setup experience
 # This creates a beautiful demo without actually running installations
 
 set -euo pipefail
 
 # Brand colors
-TEAL="39"
+TEAL="38"
 GREEN="42"
+WHITE="255"
+GRAY="245"
+HEX_TEAL="#00a5a5"
+HEX_TEAL_DARK="#1a5c5c"
+HEX_GREEN="#00d787"
 
-# Display the ASCII art logo with gum
+CURRENT_STEP=0
+TOTAL_STEPS=8
+
+# Clear and show logo
+clear
 echo ""
-gum style \
-    --foreground 255 \
-    --background "#1a5c5c" \
+
+# Main logo block
+logo=$(gum style \
+    --foreground "$WHITE" \
+    --background "$HEX_TEAL_DARK" \
     --border double \
     --border-foreground "$TEAL" \
-    --padding "1 2" \
-    --margin "0 1" \
+    --padding "1 3" \
     --bold \
     "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
     "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║" \
@@ -29,105 +39,140 @@ gum style \
     "██████╔╝██║   ██║██║██║     ██║             " \
     "██╔══██╗██║   ██║██║██║     ██║             " \
     "██████╔╝╚██████╔╝██║███████╗██║             " \
-    "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             "
+    "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             ")
 
-gum style \
+tagline=$(gum style \
     --foreground "$TEAL" \
-    --margin "0 1" \
     --italic \
-    "AWS Config Sync"
+    --padding "0 2" \
+    "AWS Config Sync • Powered by 1Password")
 
+gum join --vertical --align center "$logo" "$tagline"
 echo ""
 sleep 0.3
 
-# Phase 1: Homebrew
-gum style --foreground "$GREEN" --margin "0 1" "✓ Homebrew already installed"
+# Helper functions
+show_step() {
+    local title="$1"
+    ((CURRENT_STEP++))
+    echo ""
+
+    local badge
+    badge=$(gum style \
+        --foreground "$WHITE" \
+        --background "$HEX_TEAL" \
+        --padding "0 1" \
+        --bold \
+        "STEP $CURRENT_STEP/$TOTAL_STEPS")
+
+    local step_title
+    step_title=$(gum style \
+        --foreground "$WHITE" \
+        --bold \
+        --padding "0 1" \
+        "$title")
+
+    gum join --horizontal --align center "$badge" "$step_title"
+
+    local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    local filled=$((progress / 5))
+    local empty=$((20 - filled))
+    local bar=""
+    for ((i=0; i<filled; i++)); do bar+="█"; done
+    for ((i=0; i<empty; i++)); do bar+="░"; done
+    gum style --foreground "$TEAL" --faint "    $bar $progress%"
+}
+
+show_success() {
+    gum style --foreground "$GREEN" --margin "0 1" "✓ $1"
+}
+
+# Step 1: Homebrew
+show_step "Installing Homebrew"
+sleep 0.15
+show_success "Homebrew already installed"
+
+# Step 2: UI toolkit
+show_step "Installing UI toolkit"
+sleep 0.15
+show_success "gum already installed"
+
+# Step 3: CLI tools
+show_step "Installing CLI tools"
+gum spin --spinner meter --spinner.foreground "$TEAL" --title "Installing AWS CLI..." -- sleep 0.3
+show_success "AWS CLI ready"
+gum spin --spinner meter --spinner.foreground "$TEAL" --title "Installing jq..." -- sleep 0.2
+show_success "jq ready"
+gum spin --spinner meter --spinner.foreground "$TEAL" --title "Installing glow..." -- sleep 0.2
+show_success "glow ready"
+gum spin --spinner meter --spinner.foreground "$TEAL" --title "Installing 1Password CLI..." -- sleep 0.25
+show_success "1Password CLI ready"
+
+# Step 4: Verify 1Password
+show_step "Verifying 1Password"
 sleep 0.2
+show_success "1Password CLI connected"
 
-# Phase 2: Install tools
-echo ""
-gum style \
-    --border rounded \
-    --border-foreground "$TEAL" \
-    --padding "0 2" \
-    --margin "0 1" \
-    "Installing required tools..."
+# Step 5: Configure environment
+show_step "Configuring environment"
+sleep 0.15
+show_success "OP_ACCOUNT already configured"
+show_success "PATH already configured"
 
-gum spin --spinner dot --title "Installing AWS CLI..." -- sleep 0.5
-gum spin --spinner dot --title "Installing jq..." -- sleep 0.3
-gum spin --spinner dot --title "Installing glow..." -- sleep 0.3
-gum spin --spinner dot --title "Installing 1Password CLI..." -- sleep 0.4
+# Step 6: Build native apps
+show_step "Building native apps"
+gum spin --spinner globe --spinner.foreground "$TEAL" --title "Downloading credential helper..." -- sleep 0.25
+gum spin --spinner dot --spinner.foreground "$TEAL" --title "Compiling credential helper..." -- sleep 0.4
+show_success "Credential helper built"
+gum spin --spinner globe --spinner.foreground "$TEAL" --title "Downloading menu bar app..." -- sleep 0.25
+gum spin --spinner dot --spinner.foreground "$TEAL" --title "Compiling menu bar app..." -- sleep 0.5
+gum spin --spinner globe --spinner.foreground "$TEAL" --title "Downloading icons..." -- sleep 0.15
+show_success "Menu bar app built"
 
-gum style --foreground "$GREEN" --margin "0 1" "✓ All tools installed"
-sleep 0.2
+# Step 7: Cleanup
+show_step "Cleaning up"
+sleep 0.15
+show_success "Cleanup complete"
 
-# Phase 3: Verify 1Password
-echo ""
-gum style \
-    --border rounded \
-    --border-foreground "$TEAL" \
-    --padding "0 2" \
-    --margin "0 1" \
-    "Verifying 1Password CLI..."
-
-sleep 0.3
-gum style --foreground "$GREEN" --margin "0 1" "✓ 1Password CLI connected"
-gum style --foreground "$GREEN" --margin "0 1" "✓ OP_ACCOUNT configured"
-sleep 0.2
-
-# Phase 4: Build Swift apps
-echo ""
-gum style \
-    --border rounded \
-    --border-foreground "$TEAL" \
-    --padding "0 2" \
-    --margin "0 1" \
-    "Building native applications..."
-
-gum spin --spinner dot --title "Downloading credential helper source..." -- sleep 0.3
-gum spin --spinner dot --title "Compiling credential helper..." -- sleep 0.6
-
-gum style --foreground "$GREEN" --margin "0 1" "✓ Credential helper compiled"
-
-gum spin --spinner dot --title "Downloading menu bar app source..." -- sleep 0.3
-gum spin --spinner dot --title "Compiling menu bar app..." -- sleep 0.8
-gum spin --spinner dot --title "Downloading app icons..." -- sleep 0.2
-
-gum style --foreground "$GREEN" --margin "0 1" "✓ Menu bar app built"
-sleep 0.2
-
-# Phase 5: Launch app
-echo ""
-gum style \
-    --border rounded \
-    --border-foreground "$TEAL" \
-    --padding "0 2" \
-    --margin "0 1" \
-    "Starting menu bar app..."
-
-sleep 0.3
-gum style --foreground "$GREEN" --margin "0 1" "✓ Menu bar app launched"
-
-gum spin --spinner dot --title "Running initial sync..." -- sleep 0.6
+# Step 8: Launch
+show_step "Launching app"
+sleep 0.15
+show_success "Menu bar app launched"
+gum spin --spinner pulse --spinner.foreground "$GREEN" --title "Running initial sync..." -- sleep 0.4
 
 # Final banner
 echo ""
+
+header=$(gum style \
+    --foreground "$GREEN" \
+    --bold \
+    --align center \
+    "✓ Setup Complete!")
+
+info=$(gum style \
+    --foreground "$WHITE" \
+    --padding "1 0" \
+    "Look for the NorthBuilt icon in your menu bar." \
+    "" \
+    "$(gum style --foreground "$TEAL" --bold "Test your AWS access:")" \
+    "  $(gum style --foreground "$GRAY" "aws s3 ls")" \
+    "" \
+    "$(gum style --foreground "$TEAL" --bold "Use a client profile:")" \
+    "  $(gum style --foreground "$GRAY" "aws s3 ls --profile donatefordough")" \
+    "" \
+    "$(gum style --foreground "$TEAL" --bold "Sync schedule:")" \
+    "  $(gum style --foreground "$GRAY" "Automatic every hour, or click icon to sync now")" \
+    "" \
+    "$(gum style --foreground "$TEAL" --bold "Enable Launch at Login:")" \
+    "  $(gum style --foreground "$GRAY" "Click NorthBuilt icon → Launch at Login")")
+
+content=$(gum join --vertical --align center "$header" "$info")
+
 gum style \
     --border double \
     --border-foreground "$GREEN" \
-    --padding "1 2" \
+    --padding "1 3" \
     --margin "0 1" \
-    --bold \
-    "✓ Setup Complete!" \
-    "" \
-    "Look for the NorthBuilt icon in your menu bar." \
-    "" \
-    "Test your AWS access:" \
-    "  aws s3 ls" \
-    "" \
-    "Use a client profile:" \
-    "  aws s3 ls --profile donatefordough" \
-    "" \
-    "The menu bar app syncs automatically every hour."
+    "$content"
 
 echo ""
