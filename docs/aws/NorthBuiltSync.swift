@@ -1,6 +1,8 @@
 import Cocoa
 import os.log
 import ServiceManagement
+import UserNotifications
+import Network
 
 // MARK: - Logger
 
@@ -13,8 +15,118 @@ private enum Config {
     static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".northbuilt/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
-    static let syncInterval: TimeInterval = 3600 // 1 hour
+    static let defaultSyncInterval: TimeInterval = 3600 // 1 hour
     static let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "craftcodery.1password.com"
+}
+
+// MARK: - Preferences
+
+class Preferences {
+    static let shared = Preferences()
+
+    private let defaults = UserDefaults.standard
+
+    private enum Keys {
+        static let notificationsEnabled = "notificationsEnabled"
+        static let syncInterval = "syncInterval"
+        static let lastSyncDate = "lastSyncDate"
+        static let consecutiveFailures = "consecutiveFailures"
+    }
+
+    var notificationsEnabled: Bool {
+        get { defaults.object(forKey: Keys.notificationsEnabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Keys.notificationsEnabled) }
+    }
+
+    var syncInterval: TimeInterval {
+        get {
+            let interval = defaults.double(forKey: Keys.syncInterval)
+            return interval > 0 ? interval : Config.defaultSyncInterval
+        }
+        set { defaults.set(newValue, forKey: Keys.syncInterval) }
+    }
+
+    var lastSyncDate: Date? {
+        get { defaults.object(forKey: Keys.lastSyncDate) as? Date }
+        set { defaults.set(newValue, forKey: Keys.lastSyncDate) }
+    }
+
+    var consecutiveFailures: Int {
+        get { defaults.integer(forKey: Keys.consecutiveFailures) }
+        set { defaults.set(newValue, forKey: Keys.consecutiveFailures) }
+    }
+}
+
+// MARK: - Network Monitor
+
+class NetworkMonitor {
+    static let shared = NetworkMonitor()
+
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "com.northbuilt.sync.networkmonitor")
+    private(set) var isConnected = true
+
+    func start() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            self?.isConnected = path.status == .satisfied
+            logger.notice("Network status: \(path.status == .satisfied ? "connected" : "disconnected")")
+        }
+        monitor.start(queue: queue)
+    }
+
+    func stop() {
+        monitor.cancel()
+    }
+}
+
+// MARK: - Notification Manager
+
+class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationManager()
+
+    private override init() {
+        super.init()
+    }
+
+    func requestPermission() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if granted {
+                logger.notice("Notification permission granted")
+            } else if let error = error {
+                logger.error("Notification permission error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func sendNotification(title: String, body: String, isError: Bool = false) {
+        guard Preferences.shared.notificationsEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = isError ? .default : nil
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil // Deliver immediately
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                logger.error("Failed to send notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // Handle notification when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
 }
 
 // MARK: - OnePasswordCLI
@@ -102,12 +214,14 @@ actor SyncEngine {
         case downloadFailed(String)
         case substitutionFailed(String)
         case unsubstitutedPlaceholders
+        case networkUnavailable
 
         var errorDescription: String? {
             switch self {
             case .downloadFailed(let url): return "Failed to download \(url)"
             case .substitutionFailed(let msg): return msg
             case .unsubstitutedPlaceholders: return "Config has unsubstituted MFA placeholders"
+            case .networkUnavailable: return "No network connection"
             }
         }
     }
@@ -117,11 +231,24 @@ actor SyncEngine {
         let message: String
         let mfaCount: Int
         let mfaSuccess: Int
+        let skipped: Bool
     }
 
     private let opCLI = OnePasswordCLI()
 
     func sync() async -> SyncResult {
+        // Check network connectivity first
+        guard NetworkMonitor.shared.isConnected else {
+            logger.notice("Sync skipped: no network connection")
+            return SyncResult(
+                success: true,
+                message: "Waiting for network",
+                mfaCount: 0,
+                mfaSuccess: 0,
+                skipped: true
+            )
+        }
+
         logger.notice("Starting sync")
 
         do {
@@ -153,7 +280,8 @@ actor SyncEngine {
                         success: false,
                         message: "Config validation failed",
                         mfaCount: 0,
-                        mfaSuccess: 0
+                        mfaSuccess: 0,
+                        skipped: false
                     )
                 }
             }
@@ -213,7 +341,8 @@ actor SyncEngine {
                     success: false,
                     message: "1Password may be locked",
                     mfaCount: placeholders.count,
-                    mfaSuccess: mfaSuccess
+                    mfaSuccess: mfaSuccess,
+                    skipped: false
                 )
             }
 
@@ -226,7 +355,8 @@ actor SyncEngine {
                 success: true,
                 message: "Sync complete",
                 mfaCount: placeholders.count,
-                mfaSuccess: mfaSuccess
+                mfaSuccess: mfaSuccess,
+                skipped: false
             )
 
         } catch {
@@ -235,7 +365,8 @@ actor SyncEngine {
                 success: false,
                 message: error.localizedDescription,
                 mfaCount: 0,
-                mfaSuccess: 0
+                mfaSuccess: 0,
+                skipped: false
             )
         }
     }
@@ -270,13 +401,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastSyncSuccess: Bool = true
     private var isSyncing: Bool = false
     private let syncEngine = SyncEngine()
+    private var isFirstSync = true
 
     private var statusMenu: NSMenu!
     private var statusMenuItem: NSMenuItem!
     private var lastSyncMenuItem: NSMenuItem!
     private var launchAtLoginMenuItem: NSMenuItem!
+    private var notificationsMenuItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Start network monitoring
+        NetworkMonitor.shared.start()
+
+        // Request notification permission
+        NotificationManager.shared.requestPermission()
+
+        // Restore last sync time from preferences
+        lastSyncTime = Preferences.shared.lastSyncDate
+
         setupStatusItem()
         setupMenu()
 
@@ -285,8 +427,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await performSync()
         }
 
-        // Schedule hourly sync
-        syncTimer = Timer.scheduledTimer(withTimeInterval: Config.syncInterval, repeats: true) { [weak self] _ in
+        // Schedule sync based on preference
+        scheduleSyncTimer()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        NetworkMonitor.shared.stop()
+    }
+
+    private func scheduleSyncTimer() {
+        syncTimer?.invalidate()
+        syncTimer = Timer.scheduledTimer(withTimeInterval: Preferences.shared.syncInterval, repeats: true) { [weak self] _ in
             Task {
                 await self?.performSync()
             }
@@ -321,6 +472,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         lastSyncMenuItem = NSMenuItem(title: "Last sync: Never", action: nil, keyEquivalent: "")
         lastSyncMenuItem.isEnabled = false
         statusMenu.addItem(lastSyncMenuItem)
+        updateLastSyncTime()
 
         statusMenu.addItem(NSMenuItem.separator())
 
@@ -345,6 +497,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(openConfigItem)
 
         statusMenu.addItem(NSMenuItem.separator())
+
+        // Notifications toggle
+        notificationsMenuItem = NSMenuItem(title: "Notifications", action: #selector(toggleNotifications), keyEquivalent: "")
+        notificationsMenuItem.target = self
+        notificationsMenuItem.state = Preferences.shared.notificationsEnabled ? .on : .off
+        statusMenu.addItem(notificationsMenuItem)
 
         // Launch at Login
         launchAtLoginMenuItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
@@ -373,27 +531,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isSyncing else { return }
 
         isSyncing = true
-        updateStatusIcon(syncing: true)
         statusMenuItem.title = "Status: Syncing..."
 
         let result = await syncEngine.sync()
 
         isSyncing = false
-        lastSyncTime = Date()
-        lastSyncSuccess = result.success
 
-        updateStatusIcon(syncing: false)
+        // Don't update last sync time if sync was skipped
+        if !result.skipped {
+            lastSyncTime = Date()
+            Preferences.shared.lastSyncDate = lastSyncTime
+            lastSyncSuccess = result.success
+
+            // Handle notifications
+            if result.success {
+                Preferences.shared.consecutiveFailures = 0
+
+                // Only notify on first successful sync after launch
+                if isFirstSync {
+                    NotificationManager.shared.sendNotification(
+                        title: "NorthBuilt Sync",
+                        body: "AWS configuration synced successfully"
+                    )
+                }
+            } else {
+                Preferences.shared.consecutiveFailures += 1
+
+                // Notify on failure (always)
+                NotificationManager.shared.sendNotification(
+                    title: "NorthBuilt Sync Failed",
+                    body: result.message,
+                    isError: true
+                )
+            }
+
+            isFirstSync = false
+        }
+
         updateLastSyncTime()
 
-        if result.success {
+        if result.skipped {
+            statusMenuItem.title = "Status: \(result.message)"
+        } else if result.success {
             statusMenuItem.title = "Status: Synced"
         } else {
             statusMenuItem.title = "Status: \(result.message)"
         }
-    }
-
-    private func updateStatusIcon(syncing: Bool) {
-        // Icon stays the same - status is shown in the menu
     }
 
     private func updateLastSyncTime() {
@@ -443,6 +626,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(Config.awsConfigPath)
     }
 
+    @objc private func toggleNotifications() {
+        Preferences.shared.notificationsEnabled.toggle()
+        notificationsMenuItem.state = Preferences.shared.notificationsEnabled ? .on : .off
+
+        if Preferences.shared.notificationsEnabled {
+            NotificationManager.shared.requestPermission()
+        }
+    }
+
     @objc private func toggleLaunchAtLogin() {
         if #available(macOS 13.0, *) {
             do {
@@ -469,11 +661,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.messageText = "NorthBuilt Sync"
         alert.informativeText = """
-        Version 1.0
+        Version 1.1
 
         Syncs AWS configuration from 1Password.
 
-        Runs hourly in the background.
+        Features:
+        - Hourly background sync
+        - Network-aware (skips when offline)
+        - Failure notifications
+        - Launch at Login support
         """
         alert.alertStyle = .informational
         alert.runModal()
