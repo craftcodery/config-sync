@@ -162,28 +162,22 @@ else
     touch "$SHELL_PROFILE"
 fi
 
-if [ -z "${OP_ACCOUNT:-}" ]; then
-    if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
-        gum style \
-            --border rounded \
-            --border-foreground 39 \
-            --padding "0 2" \
-            --margin "1 0" \
-            "Configuring 1Password account..."
+if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
+    gum style \
+        --border rounded \
+        --border-foreground 39 \
+        --padding "0 2" \
+        --margin "1 0" \
+        "Configuring 1Password account..."
 
-        echo '' >> "$SHELL_PROFILE"
-        echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
-        echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
-        export OP_ACCOUNT="craftcodery.1password.com"
+    echo '' >> "$SHELL_PROFILE"
+    echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
+    echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
+    export OP_ACCOUNT="craftcodery.1password.com"
 
-        gum style --foreground 42 "✓ OP_ACCOUNT configured"
-    else
-        gum style --foreground 42 "✓ OP_ACCOUNT already configured"
-    fi
+    gum style --foreground 42 "✓ OP_ACCOUNT configured"
 else
-    if [ -n "${OP_ACCOUNT:-}" ]; then
-        gum style --foreground 42 "✓ OP_ACCOUNT already set"
-    fi
+    gum style --foreground 42 "✓ OP_ACCOUNT already configured"
 fi
 
 : ------------------------------------------
