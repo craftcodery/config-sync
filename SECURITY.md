@@ -32,7 +32,7 @@ If you suspect the repository has been compromised:
 2. Check recent commits and PRs for unauthorized changes
 3. On affected machines, stop the menu bar app:
    ```bash
-   osascript -e 'quit app "NorthBuilt AWS Sync"'
+   osascript -e 'quit app "NorthBuilt Sync"'
    ```
 4. Review `~/.aws/config` and `~/.northbuilt/aws/` for unauthorized modifications
 5. Rotate any potentially exposed credentials in 1Password
@@ -53,4 +53,4 @@ The sync app downloads `aws-config` from `setup.northbuilt.com` over HTTPS. The 
 ### Logging
 - Logs are written to macOS unified logging (viewable in Console.app)
 - Logs contain sync status and error messages, but not credentials
-- Filter: `subsystem == "com.northbuilt.aws-config-sync"`
+- Filter: `subsystem == "com.northbuilt.sync"`

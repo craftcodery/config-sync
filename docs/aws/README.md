@@ -67,12 +67,12 @@ After setup, a cloud icon appears in your menu bar with the following options:
 
 View sync logs in Console.app. Filter by subsystem:
 ```
-com.northbuilt.aws-config-sync
+com.northbuilt.sync
 ```
 
 Or via command line:
 ```bash
-log show --predicate 'subsystem == "com.northbuilt.aws-config-sync"' --last 1h
+log show --predicate 'subsystem == "com.northbuilt.sync"' --last 1h
 ```
 
 ## How It Works
@@ -103,13 +103,13 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 ├── index.html                  # Setup script
 ├── aws-config                  # AWS config template
 ├── aws-vault-1password.swift   # Credential helper source
-├── NorthBuiltAWSSync.swift     # Menu bar app source
+├── NorthBuiltSync.swift     # Menu bar app source
 └── readability.js              # Makes script pretty in browsers
 
 ~/.northbuilt/aws/ (on employee machines)
-├── NorthBuiltAWSSync.app/      # Menu bar app (runs continuously)
+├── NorthBuiltSync.app/      # Menu bar app (runs continuously)
 │   └── Contents/
-│       ├── MacOS/NorthBuiltAWSSync
+│       ├── MacOS/NorthBuiltSync
 │       └── Info.plist
 └── aws-vault-1password         # Compiled credential helper
 
@@ -144,7 +144,7 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 | `index.html` | Setup script (dual-purpose: webpage + bash) |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password.swift` | Credential helper source |
-| `NorthBuiltAWSSync.swift` | Menu bar app source |
+| `NorthBuiltSync.swift` | Menu bar app source |
 | `readability.js` | Makes script pretty in browsers |
 | `1password-standard.md` | 1Password entry format documentation |
 
@@ -179,14 +179,14 @@ Ensure the 1Password entry has:
 This macOS prompt appears when the 1Password CLI first communicates with the 1Password app.
 
 **For the menu bar app:**
-The app runs as `NorthBuilt AWS Sync`, so macOS remembers your permission choice:
+The app runs as `NorthBuilt Sync`, so macOS remembers your permission choice:
 
 1. When the prompt appears, click **Allow**
 2. The permission persists - you won't be asked again
 
 If you clicked "Don't Allow":
 1. Go to System Settings → Privacy & Security → Automation
-2. Find "NorthBuilt AWS Sync" and enable the toggle for "1Password"
+2. Find "NorthBuilt Sync" and enable the toggle for "1Password"
 
 **For terminal usage:**
 If prompted when running `aws` commands directly:
@@ -197,8 +197,8 @@ If prompted when running `aws` commands directly:
 
 ### Menu bar icon not showing
 
-1. Check if the app is running: `pgrep -f NorthBuiltAWSSync`
-2. If not running, launch it: `open ~/.northbuilt/aws/NorthBuiltAWSSync.app`
+1. Check if the app is running: `pgrep -f NorthBuiltSync`
+2. If not running, launch it: `open ~/.northbuilt/aws/NorthBuiltSync.app`
 3. Check for compilation errors in Console.app
 
 ### Sync fails with "1Password may be locked"
@@ -218,7 +218,7 @@ If you were using the previous bash-based system:
 
 ```bash
 # Quit the menu bar app
-osascript -e 'quit app "NorthBuilt AWS Sync"'
+osascript -e 'quit app "NorthBuilt Sync"'
 
 # Remove the app and config
 rm -rf ~/.northbuilt/aws

@@ -216,23 +216,29 @@ chmod +x "$CONFIG_DIR/aws-vault-1password"
 gum style --foreground 42 "✓ Credential helper compiled"
 
 # Download and compile menu bar app
-APP_NAME="NorthBuiltAWSSync"
+APP_NAME="NorthBuiltSync"
 APP_DIR="$CONFIG_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_DIR/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 
 gum spin --spinner dot --title "Downloading menu bar app source..." -- \
-    curl -fsSL "$BASE_URL/NorthBuiltAWSSync.swift" -o "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+    curl -fsSL "$BASE_URL/NorthBuiltSync.swift" -o "$CONFIG_DIR/NorthBuiltSync.swift"
 
 gum spin --spinner dot --title "Compiling menu bar app..." -- \
-    swiftc -O -o "$CONFIG_DIR/NorthBuiltAWSSync" "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+    swiftc -O -o "$CONFIG_DIR/NorthBuiltSync" "$CONFIG_DIR/NorthBuiltSync.swift"
 
 # Create .app bundle structure
 rm -rf "$APP_DIR"
 mkdir -p "$APP_MACOS"
+mkdir -p "$APP_RESOURCES"
 
-mv "$CONFIG_DIR/NorthBuiltAWSSync" "$APP_MACOS/$APP_NAME"
-rm -f "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+mv "$CONFIG_DIR/NorthBuiltSync" "$APP_MACOS/$APP_NAME"
+rm -f "$CONFIG_DIR/NorthBuiltSync.swift"
+
+# Download app icon
+gum spin --spinner dot --title "Downloading app icon..." -- \
+    curl -fsSL "$BASE_URL/AppIcon.icns" -o "$APP_RESOURCES/AppIcon.icns"
 
 # Create Info.plist (LSUIElement=true makes it a background app with no dock icon)
 cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
@@ -241,19 +247,21 @@ cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>NorthBuiltAWSSync</string>
+    <string>NorthBuiltSync</string>
     <key>CFBundleIdentifier</key>
-    <string>com.northbuilt.aws-config-sync</string>
+    <string>com.northbuilt.sync</string>
     <key>CFBundleName</key>
-    <string>NorthBuilt AWS Sync</string>
+    <string>NorthBuilt Sync</string>
     <key>CFBundleDisplayName</key>
-    <string>NorthBuilt AWS Sync</string>
+    <string>NorthBuilt Sync</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSUIElement</key>
@@ -297,6 +305,9 @@ done
 # Remove old sync.sh if it exists
 rm -f "$CONFIG_DIR/sync.sh"
 
+# Remove old NorthBuiltAWSSync app if it exists (renamed to NorthBuiltSync)
+rm -rf "$CONFIG_DIR/NorthBuiltAWSSync.app"
+
 : ------------------------------------------
 :   Phase 8: Launch menu bar app
 : ------------------------------------------
@@ -308,7 +319,8 @@ gum style \
     --margin "1 0" \
     "Starting menu bar app..."
 
-# Kill any existing instance
+# Kill any existing instance (including old name)
+pkill -f "NorthBuiltSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltAWSSync.app" 2>/dev/null || true
 sleep 1
 

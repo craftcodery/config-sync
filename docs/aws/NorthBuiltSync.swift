@@ -4,7 +4,7 @@ import ServiceManagement
 
 // MARK: - Logger
 
-private let logger = Logger(subsystem: "com.northbuilt.aws-config-sync", category: "sync")
+private let logger = Logger(subsystem: "com.northbuilt.sync", category: "sync")
 
 // MARK: - Configuration
 
@@ -348,7 +348,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         // About
-        let aboutItem = NSMenuItem(title: "About NorthBuilt AWS Sync", action: #selector(aboutClicked), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About NorthBuilt Sync", action: #selector(aboutClicked), keyEquivalent: "")
         aboutItem.target = self
         statusMenu.addItem(aboutItem)
 
@@ -441,7 +441,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Also show a notification about how to filter
         let alert = NSAlert()
         alert.messageText = "View Logs"
-        alert.informativeText = "Console.app opened. Filter by subsystem:\ncom.northbuilt.aws-config-sync"
+        alert.informativeText = "Console.app opened. Filter by subsystem:\ncom.northbuilt.sync"
         alert.alertStyle = .informational
         alert.runModal()
     }
@@ -474,7 +474,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func aboutClicked() {
         let alert = NSAlert()
-        alert.messageText = "NorthBuilt AWS Sync"
+        alert.messageText = "NorthBuilt Sync"
         alert.informativeText = """
         Version 1.0
 

@@ -21,8 +21,8 @@ All setup scripts require:
    - Enable "Integrate with 1Password CLI"
 3. **Automation permission for 1Password** (one-time approval):
    - When you see "op would like to access data from other apps", click **Allow**
-   - This grants permission to the sync app (`NorthBuilt AWS Sync`) - the choice persists
-   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt AWS Sync"
+   - This grants permission to the sync app (`NorthBuilt Sync`) - the choice persists
+   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt Sync"
 
 ## How It Works
 
