@@ -1,13 +1,12 @@
 #!/bin/bash
-# Generates CHECKSUMS file for all distributable files
-# Run this before committing changes to docs/aws/
+# Generates CHECKSUMS file for AWS config sync distributable files
+# Run this before committing changes
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CHECKSUMS_FILE="$REPO_ROOT/docs/aws/CHECKSUMS"
+cd "$(dirname "$0")"
 
-cd "$REPO_ROOT/docs/aws"
+CHECKSUMS_FILE="CHECKSUMS"
 
 echo "# SHA256 checksums for NorthBuilt AWS Config Sync" > "$CHECKSUMS_FILE"
 echo "# Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$CHECKSUMS_FILE"
@@ -23,6 +22,6 @@ for file in sync.sh aws-vault-1password aws-config; do
 done
 
 echo ""
-echo "Generated: $CHECKSUMS_FILE"
+echo "Generated: $(pwd)/$CHECKSUMS_FILE"
 echo ""
 cat "$CHECKSUMS_FILE"

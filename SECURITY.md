@@ -28,10 +28,11 @@ All downloaded files are verified against SHA256 checksums before deployment:
 When modifying distributable files, regenerate checksums before committing:
 
 ```bash
-./scripts/generate-checksums.sh
+# For AWS module
+./docs/aws/generate-checksums.sh
 ```
 
-This updates `docs/aws/CHECKSUMS`. Both the file changes AND the updated checksums must be in the same PR.
+Both the file changes AND the updated checksums must be in the same PR.
 
 ### What Checksums Protect Against
 
