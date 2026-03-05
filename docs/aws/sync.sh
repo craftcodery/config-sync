@@ -5,10 +5,6 @@
 # Usage:
 #   sync.sh
 #
-# Security:
-#   - All downloads are verified against CHECKSUMS before deployment
-#   - If any checksum fails, sync is aborted and existing files are kept
-#
 # Logs to ~/Library/Logs/northbuilt-aws-config-sync.log
 # When run by launchd, stdout is also redirected to the log file.
 
@@ -23,7 +19,6 @@ CONFIG_DIR="$HOME/.northbuilt/aws"
 LOG_DIR="$HOME/Library/Logs"
 LOG_FILE="$LOG_DIR/northbuilt-aws-config-sync.log"
 MAX_LOG_SIZE=1048576  # 1MB
-DOWNLOAD_DIR=""  # Set during execution
 
 export OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}"
 
@@ -46,82 +41,12 @@ log() {
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] [$level] $message"
 }
+# Note: launchd redirects stdout to LOG_FILE via StandardOutPath.
+# Manual runs just print to terminal.
 
 log_info() { log "INFO" "$1"; }
 log_debug() { log "DEBUG" "$1"; }
 log_error() { log "ERROR" "$1"; }
-
-# =============================================================================
-# Checksum Verification
-# =============================================================================
-
-# Parse CHECKSUMS file and return expected hash for a filename
-get_expected_checksum() {
-    local checksums_file="$1"
-    local filename="$2"
-    grep -E "^[a-f0-9]+[[:space:]]+${filename}$" "$checksums_file" | awk '{print $1}' | head -1
-}
-
-# Verify a file against expected checksum
-verify_checksum() {
-    local file="$1"
-    local expected="$2"
-    local actual
-    actual=$(shasum -a 256 "$file" | awk '{print $1}')
-
-    if [ "$actual" = "$expected" ]; then
-        return 0
-    else
-        log_error "Checksum mismatch for $(basename "$file")"
-        log_error "  Expected: $expected"
-        log_error "  Actual:   $actual"
-        return 1
-    fi
-}
-
-# =============================================================================
-# Download with Verification
-# =============================================================================
-
-download_and_verify() {
-    local filename="$1"
-    local checksums_file="$2"
-    local dest="$DOWNLOAD_DIR/$filename"
-
-    # Download file
-    if ! curl -fsSL "$BASE_URL/$filename" -o "$dest" 2>/dev/null; then
-        log_error "Failed to download $filename"
-        return 1
-    fi
-
-    # Get expected checksum
-    local expected
-    expected=$(get_expected_checksum "$checksums_file" "$filename")
-
-    if [ -z "$expected" ]; then
-        log_error "No checksum found for $filename in CHECKSUMS"
-        return 1
-    fi
-
-    # Verify checksum
-    if ! verify_checksum "$dest" "$expected"; then
-        return 1
-    fi
-
-    log_info "Verified $filename"
-    return 0
-}
-
-# =============================================================================
-# Cleanup
-# =============================================================================
-
-cleanup() {
-    if [ -n "$DOWNLOAD_DIR" ] && [ -d "$DOWNLOAD_DIR" ]; then
-        rm -rf "$DOWNLOAD_DIR"
-    fi
-}
-trap cleanup EXIT
 
 # =============================================================================
 # Main Sync Logic
@@ -133,82 +58,40 @@ log_info "BASE_URL: $BASE_URL"
 log_info "CONFIG_DIR: $CONFIG_DIR"
 log_info "=========================================="
 
-# Create temp directory for downloads
-DOWNLOAD_DIR=$(mktemp -d)
-log_debug "Download directory: $DOWNLOAD_DIR"
-
 # -----------------------------------------------------------------------------
-# Step 1: Download and parse CHECKSUMS
+# Step 1: Update sync script itself
 # -----------------------------------------------------------------------------
 
-log_info "Downloading CHECKSUMS..."
-CHECKSUMS_FILE="$DOWNLOAD_DIR/CHECKSUMS"
-
-if ! curl -fsSL "$BASE_URL/CHECKSUMS" -o "$CHECKSUMS_FILE" 2>/dev/null; then
-    log_error "Failed to download CHECKSUMS file"
-    log_error "Sync aborted - cannot verify file integrity"
-    exit 1
-fi
-
-log_info "CHECKSUMS downloaded"
-
-# -----------------------------------------------------------------------------
-# Step 2: Download and verify all files
-# -----------------------------------------------------------------------------
-
-log_info "Downloading and verifying files..."
-
-VERIFY_FAILED=0
-
-# Download sync.sh
-if ! download_and_verify "sync.sh" "$CHECKSUMS_FILE"; then
-    VERIFY_FAILED=1
-fi
-
-# Download aws-vault-1password
-if ! download_and_verify "aws-vault-1password" "$CHECKSUMS_FILE"; then
-    VERIFY_FAILED=1
-fi
-
-# Download aws-config
-if ! download_and_verify "aws-config" "$CHECKSUMS_FILE"; then
-    VERIFY_FAILED=1
-fi
-
-# Abort if any verification failed
-if [ "$VERIFY_FAILED" -eq 1 ]; then
-    log_error "One or more files failed verification"
-    log_error "Sync aborted - keeping existing files"
-    log_info "=========================================="
-    exit 1
-fi
-
-log_info "All files verified successfully"
-
-# -----------------------------------------------------------------------------
-# Step 3: Deploy verified files
-# -----------------------------------------------------------------------------
-
-log_info "Deploying verified files..."
-
-# Deploy sync.sh (self-update)
+log_info "Checking for sync script updates..."
 SYNC_PATH="$CONFIG_DIR/sync.sh"
-if ! cmp -s "$DOWNLOAD_DIR/sync.sh" "$SYNC_PATH" 2>/dev/null; then
-    cp "$DOWNLOAD_DIR/sync.sh" "$SYNC_PATH"
-    chmod +x "$SYNC_PATH"
-    log_info "Updated sync.sh"
+
+if curl -fsSL "$BASE_URL/sync.sh" -o "$SYNC_PATH.tmp" 2>/dev/null; then
+    if ! cmp -s "$SYNC_PATH.tmp" "$SYNC_PATH" 2>/dev/null; then
+        mv "$SYNC_PATH.tmp" "$SYNC_PATH"
+        chmod +x "$SYNC_PATH"
+        log_info "Sync script updated"
+    else
+        rm -f "$SYNC_PATH.tmp"
+        log_debug "Sync script unchanged"
+    fi
 else
-    log_debug "sync.sh unchanged"
+    rm -f "$SYNC_PATH.tmp"
+    log_debug "Could not check for sync script updates"
 fi
 
-# Deploy aws-vault-1password
+# -----------------------------------------------------------------------------
+# Step 2: Download helper script
+# -----------------------------------------------------------------------------
+
+log_info "Downloading helper script..."
 HELPER_PATH="$CONFIG_DIR/aws-vault-1password"
-if ! cmp -s "$DOWNLOAD_DIR/aws-vault-1password" "$HELPER_PATH" 2>/dev/null; then
-    cp "$DOWNLOAD_DIR/aws-vault-1password" "$HELPER_PATH"
+
+if curl -fsSL "$BASE_URL/aws-vault-1password" -o "$HELPER_PATH.tmp" 2>/dev/null; then
+    mv "$HELPER_PATH.tmp" "$HELPER_PATH"
     chmod +x "$HELPER_PATH"
-    log_info "Updated aws-vault-1password"
+    log_info "Downloaded aws-vault-1password"
 else
-    log_debug "aws-vault-1password unchanged"
+    log_error "Failed to download aws-vault-1password"
 fi
 
 # Ensure config dir is in PATH
@@ -228,23 +111,39 @@ if [[ ":$PATH:" != *":$CONFIG_DIR:"* ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Step 4: Process AWS config template
+# Step 3: Download AWS config template
 # -----------------------------------------------------------------------------
 
-log_info "Processing AWS config..."
+log_info "Downloading AWS config..."
 mkdir -p "$HOME/.aws"
 
-cp "$DOWNLOAD_DIR/aws-config" "$HOME/.aws/config.tmp"
+if curl -fsSL "$BASE_URL/aws-config" -o "$HOME/.aws/config.tmp" 2>/dev/null; then
+    log_debug "Downloaded aws-config template"
+else
+    log_error "Failed to download aws-config"
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Step 4: Substitute placeholders
+# -----------------------------------------------------------------------------
+
+log_info "Substituting placeholders..."
 
 # Replace __HELPER_PATH__
 sed -i.bak "s|__HELPER_PATH__|$HELPER_PATH|g" "$HOME/.aws/config.tmp"
 log_debug "Substituted __HELPER_PATH__ with $HELPER_PATH"
 
 # Replace __MFA_SERIAL:Item:Vault__ placeholders
+# Uses parallel fetches to minimize 1Password CLI calls
 if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/null; then
     log_info "1Password authenticated, fetching MFA serials..."
 
-    account_flag="--account $OP_ACCOUNT"
+    # Build account flag
+    account_flag=""
+    if [ -n "${OP_ACCOUNT:-}" ]; then
+        account_flag="--account $OP_ACCOUNT"
+    fi
 
     # Collect all unique placeholders
     placeholders=()
@@ -257,7 +156,8 @@ if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/
 
     if [ "$mfa_count" -gt 0 ]; then
         # Create temp directory for parallel fetch results
-        mfa_tmp_dir=$(mktemp -d)
+        tmp_dir=$(mktemp -d)
+        trap 'rm -rf "$tmp_dir"' EXIT
 
         # Launch parallel fetches
         for i in "${!placeholders[@]}"; do
@@ -276,7 +176,7 @@ if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/
                     jq -r '.fields[] | select(.label == "MFA Serial ARN" or .label == "mfa_serial" or .label == "MfaSerial") | .value' | \
                     head -1) || true
                 if [ -n "$mfa_arn" ] && [ "$mfa_arn" != "null" ]; then
-                    echo "$mfa_arn" > "$mfa_tmp_dir/$i"
+                    echo "$mfa_arn" > "$tmp_dir/$i"
                 fi
             ) &
         done
@@ -288,8 +188,8 @@ if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/
         mfa_success=0
         for i in "${!placeholders[@]}"; do
             placeholder="${placeholders[$i]}"
-            if [ -f "$mfa_tmp_dir/$i" ]; then
-                mfa_serial=$(<"$mfa_tmp_dir/$i")
+            if [ -f "$tmp_dir/$i" ]; then
+                mfa_serial=$(<"$tmp_dir/$i")
                 inner="${placeholder#__MFA_SERIAL:}"
                 inner="${inner%__}"
                 item="${inner%:*}"
@@ -301,7 +201,6 @@ if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/
             fi
         done
 
-        rm -rf "$mfa_tmp_dir"
         log_info "MFA substitution: $mfa_success/$mfa_count successful"
     fi
 else

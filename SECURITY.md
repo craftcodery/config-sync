@@ -15,36 +15,6 @@ Configure these settings in GitHub: **Settings → Branches → Add rule** for `
 
 This ensures no single person can push malicious code to employee machines.
 
-## Checksum Verification
-
-All downloaded files are verified against SHA256 checksums before deployment:
-
-1. `sync.sh` downloads `CHECKSUMS` file first
-2. Each file is downloaded and verified against its checksum
-3. If ANY checksum fails, sync aborts and existing files are kept
-
-### Updating Files
-
-When modifying distributable files, regenerate checksums before committing:
-
-```bash
-# For AWS module
-./docs/aws/generate-checksums.sh
-```
-
-Both the file changes AND the updated checksums must be in the same PR.
-
-### What Checksums Protect Against
-
-- Accidental corruption during transfer
-- CDN/cache serving stale or corrupted files
-- Makes tampering detectable (attacker must modify both files AND checksums)
-
-### What Checksums Don't Protect Against
-
-- Compromised repository (attacker with write access can update checksums too)
-- That's why branch protection with 2+ approvers is essential
-
 ## Trust Model
 
 **Anyone who can merge to `main` can run code on all employee machines.**

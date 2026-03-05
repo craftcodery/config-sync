@@ -43,10 +43,9 @@ docs/                           # Served via GitHub Pages at setup.northbuilt.co
 
 ## Security
 
-All downloaded files are verified against SHA256 checksums before deployment. See [SECURITY.md](SECURITY.md) for:
+See [SECURITY.md](SECURITY.md) for:
 
 - Branch protection setup (required: 2+ approvers)
-- Checksum verification details
 - Trust model and incident response
 
 ## For Administrators

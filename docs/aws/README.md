@@ -119,8 +119,6 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 | `sync.sh` | Sync script (downloaded by setup) |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password` | Credential helper script |
-| `CHECKSUMS` | SHA256 checksums for verification |
-| `generate-checksums.sh` | Regenerates CHECKSUMS (run before committing) |
 | `readability.js` | Makes script pretty in browsers |
 | `1password-standard.md` | 1Password entry format documentation |
 
