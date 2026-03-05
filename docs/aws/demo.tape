@@ -8,22 +8,20 @@ Require gum
 
 # Shell and typography
 Set Shell "zsh"
-Set FontFamily "JetBrains Mono"
-Set FontSize 14
-Set LetterSpacing 1
-Set LineHeight 1.4
+Set FontSize 13
+Set LineHeight 1.3
 
-# Dimensions optimized for the tall logo
-Set Width 720
-Set Height 900
-Set Padding 25
+# Dimensions - wide enough to prevent text wrapping
+Set Width 820
+Set Height 880
+Set Padding 20
 
-# Window styling for polished macOS look
-Set Margin 40
-Set MarginFill "#0f172a"
-Set WindowBar Colorful
-Set WindowBarSize 40
-Set BorderRadius 10
+# Window styling (commented out - available if needed)
+# Set Margin 40
+# Set MarginFill "#0f172a"
+# Set WindowBar Colorful
+# Set WindowBarSize 40
+# Set BorderRadius 10
 
 # Color theme
 Set Theme "Catppuccin Mocha"
