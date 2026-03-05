@@ -297,7 +297,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: "AWS Sync")
+            // Use text instead of SF Symbol for better compatibility
+            button.title = "☁️"
         }
     }
 
@@ -388,11 +389,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem.button else { return }
 
         if syncing {
-            button.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: "Syncing")
+            button.title = "🔄"
         } else if lastSyncSuccess {
-            button.image = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: "AWS Sync")
+            button.title = "☁️"
         } else {
-            button.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Sync Error")
+            button.title = "⚠️"
         }
     }
 
@@ -492,8 +493,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 // MARK: - Main
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-app.run()
+// Global reference to prevent delegate from being deallocated
+private var appDelegate: AppDelegate!
+
+autoreleasepool {
+    let app = NSApplication.shared
+    appDelegate = AppDelegate()
+    app.delegate = appDelegate
+    app.setActivationPolicy(.accessory)
+    app.run()
+}
