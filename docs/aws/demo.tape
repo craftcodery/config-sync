@@ -7,11 +7,11 @@ Output demo.gif
 Require gum
 
 Set Shell "zsh"
-Set FontSize 15
-Set Width 700
-Set Height 700
+Set FontSize 13
+Set Width 680
+Set Height 750
 Set Theme "Catppuccin Mocha"
-Set Padding 20
+Set Padding 15
 Set Framerate 24
 Set TypingSpeed 40ms
 Set WindowBar Colorful
@@ -39,4 +39,4 @@ Enter
 Show
 
 # Wait for the mock script to complete
-Sleep 12s
+Sleep 10s
