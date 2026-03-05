@@ -236,9 +236,10 @@ mkdir -p "$APP_RESOURCES"
 mv "$CONFIG_DIR/NorthBuiltSync" "$APP_MACOS/$APP_NAME"
 rm -f "$CONFIG_DIR/NorthBuiltSync.swift"
 
-# Download app icon
-gum spin --spinner dot --title "Downloading app icon..." -- \
+# Download app icons
+gum spin --spinner dot --title "Downloading app icons..." -- \
     curl -fsSL "$BASE_URL/AppIcon.icns" -o "$APP_RESOURCES/AppIcon.icns"
+curl -fsSL "$BASE_URL/MenuBarIcon.png" -o "$APP_RESOURCES/MenuBarIcon.png"
 
 # Create Info.plist (LSUIElement=true makes it a background app with no dock icon)
 cat > "$APP_CONTENTS/Info.plist" << 'PLIST'

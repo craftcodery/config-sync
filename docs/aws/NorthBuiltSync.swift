@@ -294,11 +294,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
-            // Use text instead of SF Symbol for better compatibility
-            button.title = "☁️"
+            // Load custom icon from app bundle Resources
+            if let iconPath = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
+               let icon = NSImage(contentsOfFile: iconPath) {
+                icon.size = NSSize(width: 18, height: 18)
+                button.image = icon
+            } else {
+                // Fallback to text if image not found
+                button.title = "NB"
+            }
         }
     }
 
@@ -386,15 +393,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateStatusIcon(syncing: Bool) {
-        guard let button = statusItem.button else { return }
-
-        if syncing {
-            button.title = "🔄"
-        } else if lastSyncSuccess {
-            button.title = "☁️"
-        } else {
-            button.title = "⚠️"
-        }
+        // Icon stays the same - status is shown in the menu
     }
 
     private func updateLastSyncTime() {
