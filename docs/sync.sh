@@ -183,63 +183,75 @@ log_info "Substituting placeholders..."
 sed -i.bak "s|__HELPER_PATH__|$HELPER_PATH|g" "$HOME/.aws/config.tmp"
 log_debug "Substituted __HELPER_PATH__ with $HELPER_PATH"
 
-# Function to fetch MFA Serial ARN from 1Password
-fetch_mfa_serial() {
-    local item="$1"
-    local vault="$2"
+# Replace __MFA_SERIAL:Item:Vault__ placeholders
+# Uses parallel fetches to minimize 1Password CLI calls
+if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/null; then
+    log_info "1Password authenticated, fetching MFA serials..."
 
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [DEBUG] Fetching MFA serial for '$item' from vault '$vault'" >> "$LOG_FILE"
-
-    local account_flag=""
+    # Build account flag
+    account_flag=""
     if [ -n "${OP_ACCOUNT:-}" ]; then
         account_flag="--account $OP_ACCOUNT"
     fi
 
-    local mfa_arn
-    # shellcheck disable=SC2086
-    mfa_arn=$(op item get "$item" --vault "$vault" $account_flag --format json 2>/dev/null | \
-        jq -r '.fields[] | select(.label == "MFA Serial ARN" or .label == "mfa_serial" or .label == "MfaSerial") | .value' | \
-        head -1) || true
-
-    if [ -n "$mfa_arn" ] && [ "$mfa_arn" != "null" ]; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S') [DEBUG] Found MFA serial: $mfa_arn" >> "$LOG_FILE"
-        echo "$mfa_arn"
-    else
-        echo "$(date '+%Y-%m-%d %H:%M:%S') [DEBUG] No MFA serial found for '$item'" >> "$LOG_FILE"
-        echo ""
-    fi
-}
-
-# Replace __MFA_SERIAL:Item:Vault__ placeholders
-if command -v op &> /dev/null && op account list --account "$OP_ACCOUNT" &>/dev/null; then
-    log_info "1Password authenticated, fetching MFA serials..."
-
-    mfa_count=0
-    mfa_success=0
-
+    # Collect all unique placeholders
+    placeholders=()
     while IFS= read -r placeholder; do
-        if [ -n "$placeholder" ]; then
-            mfa_count=$((mfa_count + 1))
+        [ -n "$placeholder" ] && placeholders+=("$placeholder")
+    done < <(grep -o '__MFA_SERIAL:[^_]*__' "$HOME/.aws/config.tmp" 2>/dev/null | sort -u || true)
 
+    mfa_count=${#placeholders[@]}
+    log_debug "Found $mfa_count MFA placeholders"
+
+    if [ "$mfa_count" -gt 0 ]; then
+        # Create temp directory for parallel fetch results
+        tmp_dir=$(mktemp -d)
+        trap 'rm -rf "$tmp_dir"' EXIT
+
+        # Launch parallel fetches
+        for i in "${!placeholders[@]}"; do
+            placeholder="${placeholders[$i]}"
             inner="${placeholder#__MFA_SERIAL:}"
             inner="${inner%__}"
             item="${inner%:*}"
             vault="${inner##*:}"
 
-            log_debug "Processing: item='$item', vault='$vault'"
+            log_debug "Fetching: item='$item', vault='$vault'"
 
-            mfa_serial=$(fetch_mfa_serial "$item" "$vault")
+            # Fetch in background, save result to temp file
+            (
+                # shellcheck disable=SC2086
+                mfa_arn=$(op item get "$item" --vault "$vault" $account_flag --format json 2>/dev/null | \
+                    jq -r '.fields[] | select(.label == "MFA Serial ARN" or .label == "mfa_serial" or .label == "MfaSerial") | .value' | \
+                    head -1) || true
+                if [ -n "$mfa_arn" ] && [ "$mfa_arn" != "null" ]; then
+                    echo "$mfa_arn" > "$tmp_dir/$i"
+                fi
+            ) &
+        done
 
-            if [ -n "$mfa_serial" ]; then
+        # Wait for all background jobs
+        wait
+
+        # Apply substitutions from results
+        mfa_success=0
+        for i in "${!placeholders[@]}"; do
+            placeholder="${placeholders[$i]}"
+            if [ -f "$tmp_dir/$i" ]; then
+                mfa_serial=$(<"$tmp_dir/$i")
+                inner="${placeholder#__MFA_SERIAL:}"
+                inner="${inner%__}"
+                item="${inner%:*}"
+
                 config_content=$(<"$HOME/.aws/config.tmp")
                 echo "${config_content//$placeholder/$mfa_serial}" > "$HOME/.aws/config.tmp"
                 log_info "Substituted MFA serial for '$item'"
                 mfa_success=$((mfa_success + 1))
             fi
-        fi
-    done < <(grep -o '__MFA_SERIAL:[^_]*__' "$HOME/.aws/config.tmp" 2>/dev/null | sort -u || true)
+        done
 
-    log_info "MFA substitution: $mfa_success/$mfa_count successful"
+        log_info "MFA substitution: $mfa_success/$mfa_count successful"
+    fi
 else
     log_info "1Password not authenticated, skipping MFA substitution"
 fi
