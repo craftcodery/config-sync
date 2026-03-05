@@ -19,17 +19,17 @@ All setup scripts require:
 2. **1Password CLI integration enabled:**
    - Open 1Password → Settings → Developer
    - Enable "Integrate with 1Password CLI"
-3. **Full Disk Access for Terminal** (prevents repeated macOS permission prompts):
-   - Open System Settings → Privacy & Security → Full Disk Access
-   - Click **+** and add your terminal app (e.g., `/Applications/Utilities/Terminal.app`)
-   - Quit and reopen Terminal
+3. **Automation permission for 1Password** (one-time approval):
+   - When you see "op would like to access data from other apps", click **Allow**
+   - This grants permission to the sync app (`NorthBuilt AWS Sync`) - the choice persists
+   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt AWS Sync"
 
 ## How It Works
 
 Each tool follows the same pattern:
 
 1. **Setup** — One-time install via curl command
-2. **Sync** — Hourly launchd service keeps config updated
+2. **Sync** — Menu bar app syncs hourly (or manually via menu)
 3. **Credentials** — Fetched from 1Password on demand
 
 ## Repository Structure
@@ -41,8 +41,7 @@ docs/                           # Served via GitHub Pages at setup.northbuilt.co
 └── [tool]/                     # Each tool has its own directory
     ├── README.md               # Tool-specific documentation
     ├── index.html              # Setup script (curl-able)
-    ├── sync.sh                 # Sync script
-    └── ...                     # Other tool-specific files
+    └── *.swift                 # Swift source files (compiled during setup)
 ```
 
 ## Security

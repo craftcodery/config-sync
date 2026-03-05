@@ -19,11 +19,13 @@
 #   - 1Password desktop app installed
 #   - 1Password CLI integration enabled
 #     (Settings → Developer → Integrate with 1Password CLI)
+#   - Full Disk Access granted to Terminal/iTerm
+#     (System Settings → Privacy & Security → Full Disk Access)
 #
 # What this installs:
 #   - Homebrew, AWS CLI, jq, gum, glow, 1Password CLI
 #   - AWS credential helper (fetches credentials from 1Password)
-#   - Hourly sync service (keeps configs up to date)
+#   - Menu bar app for sync status and manual sync
 #
 # Source code:
 #   https://github.com/craftcodery/northbuilt-config-sync
@@ -180,8 +182,15 @@ else
     gum style --foreground 42 "✓ OP_ACCOUNT already configured"
 fi
 
+# Ensure PATH includes config dir
+if ! grep -q ".northbuilt/aws" "$SHELL_PROFILE" 2>/dev/null; then
+    echo '' >> "$SHELL_PROFILE"
+    echo '# NorthBuilt AWS tools' >> "$SHELL_PROFILE"
+    echo 'export PATH="$HOME/.northbuilt/aws:$PATH"' >> "$SHELL_PROFILE"
+fi
+
 : ------------------------------------------
-:   Phase 6: Download sync script
+:   Phase 6: Build Swift applications
 : ------------------------------------------
 
 gum style \
@@ -189,105 +198,127 @@ gum style \
     --border-foreground 39 \
     --padding "0 2" \
     --margin "1 0" \
-    "Downloading configuration tools..."
+    "Building native applications..."
 
 mkdir -p "$CONFIG_DIR"
+mkdir -p "$HOME/.aws"
 
-gum spin --spinner dot --title "Downloading sync script..." -- \
-    curl -fsSL "$BASE_URL/sync.sh" -o "$CONFIG_DIR/sync.sh"
-chmod +x "$CONFIG_DIR/sync.sh"
+# Download and compile credential helper
+gum spin --spinner dot --title "Downloading credential helper source..." -- \
+    curl -fsSL "$BASE_URL/aws-vault-1password.swift" -o "$CONFIG_DIR/aws-vault-1password.swift"
 
-gum style --foreground 42 "✓ Sync script downloaded"
+gum spin --spinner dot --title "Compiling credential helper..." -- \
+    swiftc -O -o "$CONFIG_DIR/aws-vault-1password" "$CONFIG_DIR/aws-vault-1password.swift"
+
+rm -f "$CONFIG_DIR/aws-vault-1password.swift"
+chmod +x "$CONFIG_DIR/aws-vault-1password"
+
+gum style --foreground 42 "✓ Credential helper compiled"
+
+# Download and compile menu bar app
+APP_NAME="NorthBuiltAWSSync"
+APP_DIR="$CONFIG_DIR/$APP_NAME.app"
+APP_CONTENTS="$APP_DIR/Contents"
+APP_MACOS="$APP_CONTENTS/MacOS"
+
+gum spin --spinner dot --title "Downloading menu bar app source..." -- \
+    curl -fsSL "$BASE_URL/NorthBuiltAWSSync.swift" -o "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+
+gum spin --spinner dot --title "Compiling menu bar app..." -- \
+    swiftc -O -o "$CONFIG_DIR/NorthBuiltAWSSync" "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+
+# Create .app bundle structure
+rm -rf "$APP_DIR"
+mkdir -p "$APP_MACOS"
+
+mv "$CONFIG_DIR/NorthBuiltAWSSync" "$APP_MACOS/$APP_NAME"
+rm -f "$CONFIG_DIR/NorthBuiltAWSSync.swift"
+
+# Create Info.plist (LSUIElement=true makes it a background app with no dock icon)
+cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>NorthBuiltAWSSync</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.northbuilt.aws-config-sync</string>
+    <key>CFBundleName</key>
+    <string>NorthBuilt AWS Sync</string>
+    <key>CFBundleDisplayName</key>
+    <string>NorthBuilt AWS Sync</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+
+gum style --foreground 42 "✓ Menu bar app built"
 
 : ------------------------------------------
-:   Phase 7: Run initial sync
+:   Phase 7: Remove old launchd service
 : ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Deploying configurations..."
-
-gum spin --spinner dot --title "Syncing AWS config from 1Password..." -- \
-    env OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
-
-gum style --foreground 42 "✓ Configurations deployed"
-
-: ------------------------------------------
-:   Phase 8: Set up launchd service
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Setting up automatic sync service..."
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
 PLIST_NAME="com.northbuilt.aws-config-sync.plist"
-LOG_DIR="$HOME/Library/Logs"
 
-mkdir -p "$LAUNCHD_DIR"
-mkdir -p "$LOG_DIR"
+# Unload and remove old launchd service if it exists
+if [[ -f "$LAUNCHD_DIR/$PLIST_NAME" ]]; then
+    gum style \
+        --border rounded \
+        --border-foreground 39 \
+        --padding "0 2" \
+        --margin "1 0" \
+        "Migrating from launchd to menu bar app..."
 
-# Clean up legacy service names (add old names here if we ever rename the service)
+    launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
+    rm -f "$LAUNCHD_DIR/$PLIST_NAME"
+
+    gum style --foreground 42 "✓ Old launchd service removed"
+fi
+
+# Clean up legacy service names
 for old_plist in "com.northbuilt.sync.plist" "com.northbuilt.config-sync.plist"; do
     launchctl unload "$LAUNCHD_DIR/$old_plist" 2>/dev/null || true
     rm -f "$LAUNCHD_DIR/$old_plist"
 done
 
-launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
+# Remove old sync.sh if it exists
+rm -f "$CONFIG_DIR/sync.sh"
 
-cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.northbuilt.aws-config-sync</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/bin/bash</string>
-        <string>-l</string>
-        <string>-c</string>
-        <string>$CONFIG_DIR/sync.sh</string>
-    </array>
-    <key>StartInterval</key>
-    <integer>3600</integer>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-    </dict>
-    <key>ThrottleInterval</key>
-    <integer>60</integer>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-        <key>HOME</key>
-        <string>$HOME</string>
-        <key>OP_ACCOUNT</key>
-        <string>craftcodery.1password.com</string>
-    </dict>
-    <key>WorkingDirectory</key>
-    <string>$HOME</string>
-    <key>StandardOutPath</key>
-    <string>$LOG_DIR/northbuilt-aws-config-sync.log</string>
-    <key>StandardErrorPath</key>
-    <string>$LOG_DIR/northbuilt-aws-config-sync.log</string>
-</dict>
-</plist>
-EOF
+: ------------------------------------------
+:   Phase 8: Launch menu bar app
+: ------------------------------------------
 
-launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
+gum style \
+    --border rounded \
+    --border-foreground 39 \
+    --padding "0 2" \
+    --margin "1 0" \
+    "Starting menu bar app..."
 
-gum style --foreground 42 "✓ Automatic sync configured (runs hourly)"
+# Kill any existing instance
+pkill -f "NorthBuiltAWSSync.app" 2>/dev/null || true
+sleep 1
+
+# Launch the app
+open "$APP_DIR"
+
+gum style --foreground 42 "✓ Menu bar app launched"
+
+# Wait for initial sync to complete
+gum spin --spinner dot --title "Waiting for initial sync..." -- sleep 5
 
 : ==========================================
 :   Setup Complete
@@ -301,13 +332,17 @@ gum style \
     --margin "1 0" \
     "✓ Setup Complete!" \
     "" \
+    "Look for the cloud icon in your menu bar." \
+    "" \
     "Test your AWS access:" \
     "  aws s3 ls" \
     "" \
     "Use a client profile:" \
     "  aws s3 ls --profile donatefordough" \
     "" \
-    "Sync runs automatically every hour." \
-    "Manual sync: ~/.northbuilt/aws/sync.sh" \
-    "View logs:   cat ~/Library/Logs/northbuilt-aws-config-sync.log"
+    "The menu bar app syncs automatically every hour." \
+    "Click the cloud icon to sync manually or view status." \
+    "" \
+    "To enable Launch at Login:" \
+    "  Click cloud icon → Launch at Login"
 echo ""

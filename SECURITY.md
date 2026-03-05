@@ -30,9 +30,27 @@ If you suspect the repository has been compromised:
 
 1. **Immediately** revoke write access for suspected accounts
 2. Check recent commits and PRs for unauthorized changes
-3. On affected machines, stop the sync service:
+3. On affected machines, stop the menu bar app:
    ```bash
-   launchctl unload ~/Library/LaunchAgents/com.northbuilt.aws-config-sync.plist
+   osascript -e 'quit app "NorthBuilt AWS Sync"'
    ```
 4. Review `~/.aws/config` and `~/.northbuilt/aws/` for unauthorized modifications
 5. Rotate any potentially exposed credentials in 1Password
+
+## Security Considerations
+
+### Downloaded Content
+The sync app downloads `aws-config` from `setup.northbuilt.com` over HTTPS. The trust model assumes:
+- GitHub repository access is properly controlled (2+ approvers)
+- GitHub Pages serves content integrity
+- HTTPS protects against MITM attacks
+
+### Credentials
+- AWS credentials are fetched from 1Password on-demand, never stored on disk
+- `~/.aws/config` contains only profile configuration and helper paths, not secrets
+- The credential helper outputs secrets to stdout (required by AWS credential_process)
+
+### Logging
+- Logs are written to macOS unified logging (viewable in Console.app)
+- Logs contain sync status and error messages, but not credentials
+- Filter: `subsystem == "com.northbuilt.aws-config-sync"`
