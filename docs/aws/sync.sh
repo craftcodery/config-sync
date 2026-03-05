@@ -3,11 +3,10 @@
 # Downloads latest configs from setup.northbuilt.com/aws and deploys them
 #
 # Usage:
-#   sync.sh            # Normal (logs to file)
-#   sync.sh --verbose  # Also prints to stdout
+#   sync.sh
 #
-# This script is downloaded and run by the setup process.
-# It fetches configs from GitHub Pages (no git required).
+# Logs to ~/Library/Logs/northbuilt-aws-config-sync.log
+# When run by launchd, stdout is also redirected to the log file.
 
 set -euo pipefail
 
@@ -22,17 +21,6 @@ LOG_FILE="$LOG_DIR/northbuilt-aws-config-sync.log"
 MAX_LOG_SIZE=1048576  # 1MB
 
 export OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}"
-
-# =============================================================================
-# Parse Arguments
-# =============================================================================
-
-VERBOSE=false
-for arg in "$@"; do
-    case $arg in
-        --verbose|-v|--launchd) VERBOSE=true ;;
-    esac
-done
 
 # =============================================================================
 # Logging
@@ -51,10 +39,9 @@ log() {
     local message="$2"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
-    if [ "$VERBOSE" = true ]; then
-        echo "[$level] $message"
-    fi
+    local line="[$timestamp] [$level] $message"
+    echo "$line" >> "$LOG_FILE"
+    echo "$line"
 }
 
 log_info() { log "INFO" "$1"; }
@@ -228,10 +215,6 @@ mv "$HOME/.aws/config.tmp" "$HOME/.aws/config"
 rm -f "$HOME/.aws/config.tmp.bak"
 chmod 600 "$HOME/.aws/config"
 log_info "Deployed ~/.aws/config"
-
-# -----------------------------------------------------------------------------
-# Done
-# -----------------------------------------------------------------------------
 
 log_info "Sync complete"
 log_info "=========================================="
