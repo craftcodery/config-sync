@@ -5,31 +5,38 @@
 Output demo.gif
 
 Require gum
-Require curl
 
 Set Shell "zsh"
-Set FontSize 14
-Set Width 750
-Set Height 680
+Set FontSize 15
+Set Width 700
+Set Height 700
 Set Theme "Catppuccin Mocha"
-Set Padding 15
+Set Padding 20
 Set Framerate 24
-Set TypingSpeed 50ms
+Set TypingSpeed 40ms
 Set WindowBar Colorful
 Set WindowBarSize 40
-Set BorderRadius 8
+Set BorderRadius 10
 
-# Clean prompt
+# Setup clean environment
 Hide
 Type "export PS1='$ ' && clear"
 Enter
 Show
-Sleep 300ms
 
-# Type and run the actual setup command
+Sleep 500ms
+
+# Type the curl command
 Type "curl -fsSL https://setup.northbuilt.com/aws | bash"
-Sleep 800ms
+Sleep 600ms
 Enter
 
-# Wait for script to complete (adjust based on actual runtime)
-Sleep 120s
+# Hide the actual execution, run our mock instead
+Hide
+Ctrl+C
+Type "./demo-mock.sh"
+Enter
+Show
+
+# Wait for the mock script to complete
+Sleep 12s
