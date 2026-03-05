@@ -19,7 +19,7 @@ set -euo pipefail
 BASE_URL="https://setup.northbuilt.com"
 CONFIG_DIR="$HOME/.northbuilt"
 LOG_DIR="$HOME/Library/Logs"
-LOG_FILE="$LOG_DIR/northbuilt-sync.log"
+LOG_FILE="$LOG_DIR/northbuilt-config-sync.log"
 MAX_LOG_SIZE=1048576  # 1MB
 
 export OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}"

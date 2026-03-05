@@ -1,6 +1,6 @@
-# NorthBuilt Workstation Configuration
+# NorthBuilt Config Sync
 
-Automated AWS configuration for NorthBuilt employee workstations.
+Automated AWS configuration sync for NorthBuilt employee workstations.
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ Configurations sync automatically every hour. To force a sync:
 ## Logs
 
 ```bash
-cat ~/Library/Logs/northbuilt-sync.log
+cat ~/Library/Logs/northbuilt-config-sync.log
 ```
 
 ## How It Works

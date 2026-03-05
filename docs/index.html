@@ -7,7 +7,7 @@
 ## <style>body { background-color: #1d1f21; color: #c5c8c6; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; }</style>
 
 : ==========================================
-:   NorthBuilt Workstation Setup
+:   NorthBuilt Config Sync
 : ==========================================
 
 # This script configures your MacBook for NorthBuilt development.
@@ -26,7 +26,7 @@
 #   - Hourly sync service (keeps configs up to date)
 #
 # Source code:
-#   https://github.com/craftcodery/northbuilt-workstation-config
+#   https://github.com/craftcodery/northbuilt-config-sync
 #
 
 : ==========================================
@@ -46,7 +46,7 @@ NC='\033[0m'
 
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║${NC}           ${GREEN}NorthBuilt Workstation Setup${NC}                        ${BLUE}║${NC}"
+echo -e "${BLUE}║${NC}             ${GREEN}NorthBuilt Config Sync${NC}                            ${BLUE}║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -148,6 +148,7 @@ gum style --foreground 42 "✓ 1Password CLI connected"
 :   Phase 5: Configure OP_ACCOUNT
 : ------------------------------------------
 
+# Determine shell profile (create .zshrc if none exists)
 SHELL_PROFILE=""
 if [[ -f "$HOME/.zshrc" ]]; then
     SHELL_PROFILE="$HOME/.zshrc"
@@ -155,9 +156,13 @@ elif [[ -f "$HOME/.bashrc" ]]; then
     SHELL_PROFILE="$HOME/.bashrc"
 elif [[ -f "$HOME/.bash_profile" ]]; then
     SHELL_PROFILE="$HOME/.bash_profile"
+else
+    # Modern macOS uses zsh by default, create .zshrc
+    SHELL_PROFILE="$HOME/.zshrc"
+    touch "$SHELL_PROFILE"
 fi
 
-if [ -z "${OP_ACCOUNT:-}" ] && [ -n "$SHELL_PROFILE" ]; then
+if [ -z "${OP_ACCOUNT:-}" ]; then
     if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
         gum style \
             --border rounded \
@@ -228,7 +233,7 @@ gum style \
     "Setting up automatic sync service..."
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-PLIST_NAME="com.northbuilt.sync.plist"
+PLIST_NAME="com.northbuilt.config-sync.plist"
 LOG_DIR="$HOME/Library/Logs"
 
 mkdir -p "$LAUNCHD_DIR"
@@ -242,7 +247,7 @@ cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.northbuilt.sync</string>
+    <string>com.northbuilt.config-sync</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
@@ -273,9 +278,9 @@ cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
     <key>WorkingDirectory</key>
     <string>$HOME</string>
     <key>StandardOutPath</key>
-    <string>$LOG_DIR/northbuilt-sync.log</string>
+    <string>$LOG_DIR/northbuilt-config-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>$LOG_DIR/northbuilt-sync.log</string>
+    <string>$LOG_DIR/northbuilt-config-sync.log</string>
 </dict>
 </plist>
 EOF
@@ -314,6 +319,6 @@ gum style \
     "" \
     "Sync runs automatically every hour." \
     "Manual sync: ~/.northbuilt/sync.sh" \
-    "View logs:   cat ~/Library/Logs/northbuilt-sync.log"
+    "View logs:   cat ~/Library/Logs/northbuilt-config-sync.log"
 
 echo ""
