@@ -189,7 +189,7 @@ aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
 
 ## AWS Config Integration
 
-Once credentials are stored following this standard, add to `aws/config`:
+Once credentials are stored following this standard, add to `docs/aws-config`:
 
 ```ini
 # Without MFA

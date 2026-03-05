@@ -108,7 +108,28 @@ if [ "$INTERACTIVE" = true ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Step 1: Download helper script
+# Step 1: Update sync script itself
+# -----------------------------------------------------------------------------
+
+log_info "Checking for sync script updates..."
+SYNC_PATH="$CONFIG_DIR/sync.sh"
+
+if curl -fsSL "$BASE_URL/sync.sh" -o "$SYNC_PATH.tmp" 2>/dev/null; then
+    if ! cmp -s "$SYNC_PATH.tmp" "$SYNC_PATH" 2>/dev/null; then
+        mv "$SYNC_PATH.tmp" "$SYNC_PATH"
+        chmod +x "$SYNC_PATH"
+        log_info "Sync script updated"
+    else
+        rm -f "$SYNC_PATH.tmp"
+        log_debug "Sync script unchanged"
+    fi
+else
+    rm -f "$SYNC_PATH.tmp"
+    log_debug "Could not check for sync script updates"
+fi
+
+# -----------------------------------------------------------------------------
+# Step 2: Download helper script
 # -----------------------------------------------------------------------------
 
 log_info "Downloading helper script..."
@@ -139,7 +160,7 @@ if [[ ":$PATH:" != *":$CONFIG_DIR:"* ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Step 2: Download AWS config template
+# Step 3: Download AWS config template
 # -----------------------------------------------------------------------------
 
 log_info "Downloading AWS config..."
@@ -153,7 +174,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 3: Substitute placeholders
+# Step 4: Substitute placeholders
 # -----------------------------------------------------------------------------
 
 log_info "Substituting placeholders..."
@@ -224,7 +245,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 4: Deploy config
+# Step 5: Deploy config
 # -----------------------------------------------------------------------------
 
 mv "$HOME/.aws/config.tmp" "$HOME/.aws/config"
