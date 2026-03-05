@@ -233,6 +233,12 @@ LOG_DIR="$HOME/Library/Logs"
 mkdir -p "$LAUNCHD_DIR"
 mkdir -p "$LOG_DIR"
 
+# Clean up legacy service names (add old names here if we ever rename the service)
+for old_plist in "com.northbuilt.sync.plist" "com.northbuilt.config-sync.plist"; do
+    launchctl unload "$LAUNCHD_DIR/$old_plist" 2>/dev/null || true
+    rm -f "$LAUNCHD_DIR/$old_plist"
+done
+
 launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
 
 cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
