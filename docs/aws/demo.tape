@@ -1,109 +1,91 @@
 # VHS Demo for NorthBuilt AWS Config Sync
 # https://github.com/charmbracelet/vhs
+# Regenerate with: vhs demo.tape
 
 Output demo.gif
 
+Require gum
+
 Set Shell "zsh"
-Set FontSize 16
-Set Width 900
-Set Height 500
+Set FontSize 14
+Set Width 750
+Set Height 650
 Set Theme "Catppuccin Mocha"
-Set Padding 20
-Set Framerate 30
+Set Padding 15
+Set Framerate 24
+Set TypingSpeed 30ms
+Set WindowBar Colorful
+Set WindowBarSize 40
+Set BorderRadius 8
 
-# Title
-Type "# NorthBuilt AWS Config Sync"
-Sleep 500ms
+# Hide setup
+Hide
+Type "export PS1='$ ' && clear"
 Enter
-Type "# Automatic AWS credentials via 1Password"
-Sleep 500ms
-Enter
-Enter
-Sleep 1s
-
-# Show the setup command
-Type "# One-line setup:"
+Show
 Sleep 300ms
-Enter
-Type "curl -fsSL https://setup.northbuilt.com/aws | bash"
-Sleep 1s
-Enter
-Sleep 500ms
 
-# Simulate setup output
-Type "# Installing tools and compiling native Swift app..."
-Sleep 500ms
+# Show ASCII logo
+Hide
+Type "./demo-output.sh logo"
 Enter
-Sleep 1s
+Show
+Sleep 800ms
 
-# Clear and show usage
-Type "clear"
+Hide
+Type "./demo-output.sh tagline"
 Enter
-Sleep 500ms
+Show
+Sleep 1.5s
 
-# Show AWS commands working
-Type "# After setup, AWS commands just work:"
+# Setup section
+Hide
+Type "./demo-output.sh setup"
+Enter
+Show
 Sleep 300ms
-Enter
-Enter
-Type "aws s3 ls"
-Sleep 500ms
-Enter
-Sleep 1s
-Type "# Credentials fetched automatically from 1Password"
-Sleep 300ms
-Enter
-Enter
-Sleep 1s
 
-# Show profile usage
-Type "# Use different profiles for different clients:"
-Sleep 300ms
+Hide
+Type "./demo-output.sh setup-cmd"
 Enter
-Type "aws s3 ls --profile donatefordough"
-Sleep 500ms
-Enter
-Sleep 500ms
-Type "aws s3 ls --profile retina"
-Sleep 500ms
-Enter
-Sleep 500ms
-Type "aws s3 ls --profile act"
-Sleep 500ms
-Enter
-Sleep 1s
-Enter
-
-# Show menu bar info
-Type "clear"
-Enter
-Sleep 500ms
-Type "# Menu bar app features:"
-Sleep 300ms
-Enter
-Type "#   - Syncs automatically every hour"
-Sleep 200ms
-Enter
-Type "#   - Shows sync status"
-Sleep 200ms
-Enter
-Type "#   - Manual sync with Cmd+S"
-Sleep 200ms
-Enter
-Type "#   - Self-updates from source"
-Sleep 200ms
-Enter
-Type "#   - Network-aware (skips when offline)"
-Sleep 200ms
-Enter
-Type "#   - Launch at Login support"
-Sleep 200ms
-Enter
-Enter
+Show
 Sleep 2s
 
-# End
-Type "# Learn more: https://setup.northbuilt.com/aws"
-Sleep 500ms
+# Usage section
+Hide
+Type "./demo-output.sh usage"
 Enter
+Show
+Sleep 300ms
+
+Hide
+Type "./demo-output.sh cmd 'aws s3 ls'"
+Enter
+Show
+Sleep 500ms
+
+Hide
+Type "./demo-output.sh cmd 'aws s3 ls --profile donatefordough'"
+Enter
+Show
+Sleep 500ms
+
+Hide
+Type "./demo-output.sh cmd 'aws s3 ls --profile retina'"
+Enter
+Show
+Sleep 600ms
+
+# Features section
+Hide
+Type "./demo-output.sh features"
+Enter
+Show
+Sleep 2s
+
+# URL
+Hide
+Type "./demo-output.sh url"
+Enter
+Show
 Sleep 2s
