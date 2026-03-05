@@ -297,28 +297,17 @@ echo ""
 gum style \
     --border double \
     --border-foreground 42 \
-    --foreground 42 \
-    --padding "1 3" \
-    --margin "1 0" \
-    --bold \
-    "✓ Setup Complete!"
-
-echo ""
-gum style \
-    --border rounded \
-    --border-foreground 39 \
     --padding "1 2" \
-    --margin "0 0 1 0" \
-    "Your workstation is now configured!" \
+    --margin "1 0" \
+    "✓ Setup Complete!" \
     "" \
-    "Test your NorthBuilt AWS access:" \
-    "  aws sts get-caller-identity" \
+    "Test your AWS access:" \
+    "  aws s3 ls" \
     "" \
     "Use a client profile:" \
-    "  aws sts get-caller-identity --profile donatefordough" \
+    "  aws s3 ls --profile donatefordough" \
     "" \
     "Sync runs automatically every hour." \
     "Manual sync: ~/.northbuilt/sync.sh" \
     "View logs:   cat ~/Library/Logs/northbuilt-config-sync.log"
-
 echo ""

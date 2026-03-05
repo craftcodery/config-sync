@@ -27,12 +27,12 @@ Once setup is complete, AWS commands just work:
 
 ```bash
 # Default profile (NorthBuilt)
-aws sts get-caller-identity
+aws s3 ls
 
 # Client profiles
-aws sts get-caller-identity --profile donatefordough
-aws sts get-caller-identity --profile retina
-aws sts get-caller-identity --profile act
+aws s3 ls --profile donatefordough
+aws s3 ls --profile retina
+aws s3 ls --profile act
 ```
 
 Credentials are fetched automatically from 1Password. MFA codes are retrieved automatically when needed.
