@@ -19,6 +19,10 @@ All setup scripts require:
 2. **1Password CLI integration enabled:**
    - Open 1Password → Settings → Developer
    - Enable "Integrate with 1Password CLI"
+3. **Full Disk Access for Terminal** (prevents repeated macOS permission prompts):
+   - Open System Settings → Privacy & Security → Full Disk Access
+   - Click **+** and add your terminal app (e.g., `/Applications/Utilities/Terminal.app`)
+   - Quit and reopen Terminal
 
 ## How It Works
 
