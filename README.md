@@ -4,9 +4,10 @@ Configuration sync tools for NorthBuilt employee workstations. Each tool keeps c
 
 ## Available Tools
 
-| Tool | Command |
-|------|---------|
-| [AWS](docs/aws/) | `curl -fsSL https://setup.northbuilt.com/aws \| bash` |
+| Tool | Command | Status |
+|------|---------|--------|
+| [AWS](docs/aws/) | `curl -fsSL https://setup.northbuilt.com/aws \| bash` | Ready |
+| [SSH](docs/ssh/) | `curl -fsSL https://setup.northbuilt.com/ssh \| bash` | Coming soon |
 
 Or visit [setup.northbuilt.com](https://setup.northbuilt.com) to see all available setup scripts.
 
@@ -45,3 +46,4 @@ docs/                           # Served via GitHub Pages at setup.northbuilt.co
 See individual tool READMEs for administration guides:
 
 - [AWS Configuration](docs/aws/README.md)
+- [SSH Configuration](docs/ssh/README.md) *(coming soon)*
