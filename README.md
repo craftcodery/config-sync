@@ -131,10 +131,9 @@ aws-vault-1password "AWS - Client Name" "Vault Name" --validate
 ├── bin/
 │   └── aws-vault-1password   # 1Password credential helper
 ├── docs/
-│   ├── 1password-aws-standard.md  # 1Password entry format
-│   └── setup/                # GitHub Pages for setup.northbuilt.com
-│       ├── index.html        # Dual-purpose: landing page + setup script
-│       └── CNAME             # Custom domain config
+│   ├── index.html            # setup.northbuilt.com (dual-purpose script)
+│   ├── CNAME                 # Custom domain for GitHub Pages
+│   └── 1password-aws-standard.md  # 1Password entry format
 └── launchd/
     └── com.craftcodery.config-sync.plist  # (Template only)
 ```
