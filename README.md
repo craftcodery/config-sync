@@ -1,16 +1,16 @@
 # NorthBuilt Config Sync
 
-Automated AWS configuration sync for NorthBuilt employee workstations.
+Configuration sync tools for NorthBuilt employee workstations.
 
 ## Quick Start
 
-**Run this single command on your MacBook:**
+**AWS Configuration** — Run this command on your MacBook:
 
 ```bash
-curl -fsSL https://setup.northbuilt.com | bash
+curl -fsSL https://setup.northbuilt.com/aws | bash
 ```
 
-Or visit [setup.northbuilt.com](https://setup.northbuilt.com) in your browser to see the script.
+Or visit [setup.northbuilt.com](https://setup.northbuilt.com) in your browser to see available setup scripts.
 
 ## Prerequisites
 
@@ -51,25 +51,25 @@ Credentials are fetched automatically from 1Password. MFA codes are retrieved au
 Configurations sync automatically every hour. To force a sync:
 
 ```bash
-~/.northbuilt/sync.sh
+~/.northbuilt/aws/sync.sh
 ```
 
 ## Logs
 
 ```bash
-cat ~/Library/Logs/northbuilt-config-sync.log
+cat ~/Library/Logs/northbuilt-aws-config-sync.log
 ```
 
 ## How It Works
 
-1. **Setup** (`curl setup.northbuilt.com | bash`)
+1. **Setup** (`curl setup.northbuilt.com/aws | bash`)
    - Installs tools via Homebrew
-   - Downloads sync script to `~/.northbuilt/`
+   - Downloads sync script to `~/.northbuilt/aws/`
    - Runs initial sync
    - Sets up hourly launchd service
 
 2. **Sync** (runs hourly)
-   - Downloads latest AWS config from `setup.northbuilt.com`
+   - Downloads latest AWS config from `setup.northbuilt.com/aws`
    - Downloads latest helper script
    - Substitutes MFA serial ARNs from 1Password
    - Deploys to `~/.aws/config`
@@ -83,16 +83,19 @@ cat ~/Library/Logs/northbuilt-config-sync.log
 
 ```
 setup.northbuilt.com (GitHub Pages)
-├── index.html        # Setup script
-├── sync.sh           # Sync script
-├── aws-config        # AWS config template
-└── aws-vault-1password  # Credential helper
+├── index.html              # Landing page
+└── aws/
+    ├── index.html          # AWS setup script
+    ├── sync.sh             # Sync script
+    ├── aws-config          # AWS config template
+    ├── aws-vault-1password # Credential helper
+    └── readability.js      # Makes script pretty in browsers
 
-~/.northbuilt/ (on employee machines)
-├── sync.sh           # Downloaded sync script
-└── aws-vault-1password  # Downloaded helper
+~/.northbuilt/aws/ (on employee machines)
+├── sync.sh                 # Downloaded sync script
+└── aws-vault-1password     # Downloaded helper
 
-~/.aws/config         # Deployed AWS config (with substituted values)
+~/.aws/config               # Deployed AWS config (with substituted values)
 ```
 
 ## For Administrators
@@ -104,7 +107,7 @@ setup.northbuilt.com (GitHub Pages)
    - Fields: `Access Key ID`, `Secret Access Key`
    - Optional: One-time password (TOTP), `MFA Serial ARN`
 
-2. **Add profile to `docs/aws-config`:**
+2. **Add profile to `docs/aws/aws-config`:**
    ```ini
    [profile clientname]
    credential_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name"
@@ -118,13 +121,16 @@ setup.northbuilt.com (GitHub Pages)
 ### Files in This Repo
 
 ```
-docs/                    # Served via GitHub Pages at setup.northbuilt.com
-├── index.html           # Setup script (dual-purpose: webpage + bash)
-├── readability.js       # Makes script pretty in browsers
-├── sync.sh              # Sync script (downloaded by setup)
-├── aws-config           # AWS config template
-├── aws-vault-1password  # Credential helper script
-└── CNAME                # Custom domain config
+docs/                           # Served via GitHub Pages at setup.northbuilt.com
+├── index.html                  # Landing page
+├── CNAME                       # Custom domain config
+├── 1password-aws-standard.md   # 1Password entry documentation
+└── aws/                        # AWS configuration sync
+    ├── index.html              # Setup script (dual-purpose: webpage + bash)
+    ├── readability.js          # Makes script pretty in browsers
+    ├── sync.sh                 # Sync script (downloaded by setup)
+    ├── aws-config              # AWS config template
+    └── aws-vault-1password     # Credential helper script
 ```
 
 ## Troubleshooting

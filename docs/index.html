@@ -1,313 +1,78 @@
-#!/usr/bin/env bash
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NorthBuilt Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #1a1a2e;
+            color: #eee;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #4ade80;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #60a5fa;
+            margin-top: 30px;
+        }
+        code {
+            background: #2d2d44;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+        pre {
+            background: #2d2d44;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code {
+            padding: 0;
+            background: none;
+        }
+        a {
+            color: #60a5fa;
+        }
+        .setup-card {
+            background: #2d2d44;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #4ade80;
+        }
+        .setup-card h3 {
+            margin-top: 0;
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <h1>NorthBuilt Setup</h1>
+    <p>Configuration scripts for NorthBuilt employee workstations.</p>
 
-## <script src="./readability.js"></script>
-## <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" data-manual></script>
-## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-## <style>body { background-color: #1d1f21; color: #c5c8c6; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; }</style>
+    <div class="setup-card">
+        <h3>AWS Configuration</h3>
+        <p>Sets up AWS CLI with 1Password credential integration.</p>
+        <pre><code>curl -fsSL https://setup.northbuilt.com/aws | bash</code></pre>
+        <p><a href="/aws">View script</a></p>
+    </div>
 
-: ==========================================
-:   NorthBuilt Config Sync
-: ==========================================
+    <h2>Prerequisites</h2>
+    <ul>
+        <li>1Password desktop app installed</li>
+        <li>1Password CLI integration enabled (Settings &rarr; Developer &rarr; Integrate with 1Password CLI)</li>
+    </ul>
 
-# This script configures your MacBook for NorthBuilt development.
-# Run it with:
-#
-:   curl -fsSL https://setup.northbuilt.com | bash
-#
-# Prerequisites:
-#   - 1Password desktop app installed
-#   - 1Password CLI integration enabled
-#     (Settings → Developer → Integrate with 1Password CLI)
-#
-# What this installs:
-#   - Homebrew, AWS CLI, jq, gum, glow, 1Password CLI
-#   - AWS credential helper (fetches credentials from 1Password)
-#   - Hourly sync service (keeps configs up to date)
-#
-# Source code:
-#   https://github.com/craftcodery/northbuilt-config-sync
-#
-
-: ==========================================
-:   Script Start
-: ==========================================
-
-set -euo pipefail
-
-BASE_URL="https://setup.northbuilt.com"
-CONFIG_DIR="$HOME/.northbuilt"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-echo ""
-echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║${NC}             ${GREEN}NorthBuilt Config Sync${NC}                            ${BLUE}║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo ""
-
-: ------------------------------------------
-:   Phase 1: Install Homebrew
-: ------------------------------------------
-
-if ! command -v brew &> /dev/null; then
-    echo -e "${YELLOW}▶ Installing Homebrew...${NC}"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -f /usr/local/bin/brew ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi
-
-    SHELL_PROFILE=""
-    if [[ -f "$HOME/.zshrc" ]]; then
-        SHELL_PROFILE="$HOME/.zshrc"
-    elif [[ -f "$HOME/.bashrc" ]]; then
-        SHELL_PROFILE="$HOME/.bashrc"
-    elif [[ -f "$HOME/.bash_profile" ]]; then
-        SHELL_PROFILE="$HOME/.bash_profile"
-    fi
-
-    if [[ -n "$SHELL_PROFILE" ]]; then
-        if [[ -f /opt/homebrew/bin/brew ]]; then
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$SHELL_PROFILE"
-        elif [[ -f /usr/local/bin/brew ]]; then
-            echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$SHELL_PROFILE"
-        fi
-    fi
-    echo -e "${GREEN}✓ Homebrew installed${NC}"
-else
-    echo -e "${GREEN}✓ Homebrew already installed${NC}"
-fi
-
-: ------------------------------------------
-:   Phase 2: Install gum
-: ------------------------------------------
-
-if ! command -v gum &> /dev/null; then
-    echo -e "${YELLOW}▶ Installing gum...${NC}"
-    brew install gum > /dev/null 2>&1
-    echo -e "${GREEN}✓ gum installed${NC}"
-fi
-
-: ------------------------------------------
-:   Phase 3: Install tools
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Installing required tools..."
-
-gum spin --spinner dot --title "Installing AWS CLI..." -- brew install awscli 2>/dev/null || true
-gum spin --spinner dot --title "Installing jq..." -- brew install jq 2>/dev/null || true
-gum spin --spinner dot --title "Installing glow..." -- brew install glow 2>/dev/null || true
-gum spin --spinner dot --title "Installing 1Password CLI..." -- brew install --cask 1password-cli 2>/dev/null || true
-
-gum style --foreground 42 "✓ All tools installed"
-
-: ------------------------------------------
-:   Phase 4: Verify 1Password CLI
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Verifying 1Password CLI..."
-
-if ! op account list &> /dev/null; then
-    gum style \
-        --border rounded \
-        --border-foreground 196 \
-        --foreground 196 \
-        --padding "1 2" \
-        --margin "1 0" \
-        "1Password CLI needs to be connected to the 1Password app." \
-        "" \
-        "Please complete these steps:" \
-        "  1. Open 1Password app" \
-        "  2. Go to Settings → Developer" \
-        "  3. Enable 'Integrate with 1Password CLI'" \
-        "" \
-        "After enabling, re-run this script."
-    exit 1
-fi
-
-gum style --foreground 42 "✓ 1Password CLI connected"
-
-: ------------------------------------------
-:   Phase 5: Configure OP_ACCOUNT
-: ------------------------------------------
-
-# Determine shell profile (create .zshrc if none exists)
-SHELL_PROFILE=""
-if [[ -f "$HOME/.zshrc" ]]; then
-    SHELL_PROFILE="$HOME/.zshrc"
-elif [[ -f "$HOME/.bashrc" ]]; then
-    SHELL_PROFILE="$HOME/.bashrc"
-elif [[ -f "$HOME/.bash_profile" ]]; then
-    SHELL_PROFILE="$HOME/.bash_profile"
-else
-    # Modern macOS uses zsh by default, create .zshrc
-    SHELL_PROFILE="$HOME/.zshrc"
-    touch "$SHELL_PROFILE"
-fi
-
-if [ -z "${OP_ACCOUNT:-}" ]; then
-    if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
-        gum style \
-            --border rounded \
-            --border-foreground 39 \
-            --padding "0 2" \
-            --margin "1 0" \
-            "Configuring 1Password account..."
-
-        echo '' >> "$SHELL_PROFILE"
-        echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
-        echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
-        export OP_ACCOUNT="craftcodery.1password.com"
-
-        gum style --foreground 42 "✓ OP_ACCOUNT configured"
-    else
-        gum style --foreground 42 "✓ OP_ACCOUNT already configured"
-    fi
-else
-    if [ -n "${OP_ACCOUNT:-}" ]; then
-        gum style --foreground 42 "✓ OP_ACCOUNT already set"
-    fi
-fi
-
-: ------------------------------------------
-:   Phase 6: Download sync script
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Downloading configuration tools..."
-
-mkdir -p "$CONFIG_DIR"
-
-gum spin --spinner dot --title "Downloading sync script..." -- \
-    curl -fsSL "$BASE_URL/sync.sh" -o "$CONFIG_DIR/sync.sh"
-chmod +x "$CONFIG_DIR/sync.sh"
-
-gum style --foreground 42 "✓ Sync script downloaded"
-
-: ------------------------------------------
-:   Phase 7: Run initial sync
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Deploying configurations..."
-
-gum spin --spinner dot --title "Syncing AWS config from 1Password..." -- \
-    env OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
-
-gum style --foreground 42 "✓ Configurations deployed"
-
-: ------------------------------------------
-:   Phase 8: Set up launchd service
-: ------------------------------------------
-
-gum style \
-    --border rounded \
-    --border-foreground 39 \
-    --padding "0 2" \
-    --margin "1 0" \
-    "Setting up automatic sync service..."
-
-LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-PLIST_NAME="com.northbuilt.config-sync.plist"
-LOG_DIR="$HOME/Library/Logs"
-
-mkdir -p "$LAUNCHD_DIR"
-mkdir -p "$LOG_DIR"
-
-launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
-
-cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.northbuilt.config-sync</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/bin/bash</string>
-        <string>-l</string>
-        <string>-c</string>
-        <string>$CONFIG_DIR/sync.sh --launchd</string>
-    </array>
-    <key>StartInterval</key>
-    <integer>3600</integer>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-    </dict>
-    <key>ThrottleInterval</key>
-    <integer>60</integer>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-        <key>HOME</key>
-        <string>$HOME</string>
-        <key>OP_ACCOUNT</key>
-        <string>craftcodery.1password.com</string>
-    </dict>
-    <key>WorkingDirectory</key>
-    <string>$HOME</string>
-    <key>StandardOutPath</key>
-    <string>$LOG_DIR/northbuilt-config-sync.log</string>
-    <key>StandardErrorPath</key>
-    <string>$LOG_DIR/northbuilt-config-sync.log</string>
-</dict>
-</plist>
-EOF
-
-launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
-
-gum style --foreground 42 "✓ Automatic sync configured (runs hourly)"
-
-: ==========================================
-:   Setup Complete
-: ==========================================
-
-echo ""
-gum style \
-    --border double \
-    --border-foreground 42 \
-    --padding "1 2" \
-    --margin "1 0" \
-    "✓ Setup Complete!" \
-    "" \
-    "Test your AWS access:" \
-    "  aws s3 ls" \
-    "" \
-    "Use a client profile:" \
-    "  aws s3 ls --profile donatefordough" \
-    "" \
-    "Sync runs automatically every hour." \
-    "Manual sync: ~/.northbuilt/sync.sh" \
-    "View logs:   cat ~/Library/Logs/northbuilt-config-sync.log"
-echo ""
+    <h2>Source Code</h2>
+    <p><a href="https://github.com/craftcodery/northbuilt-config-sync">github.com/craftcodery/northbuilt-config-sync</a></p>
+</body>
+</html>

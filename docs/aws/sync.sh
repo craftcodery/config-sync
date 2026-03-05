@@ -1,6 +1,6 @@
 #!/bin/bash
-# NorthBuilt Configuration Sync
-# Downloads latest configs from setup.northbuilt.com and deploys them
+# NorthBuilt AWS Configuration Sync
+# Downloads latest configs from setup.northbuilt.com/aws and deploys them
 #
 # Usage:
 #   sync.sh              # Interactive mode
@@ -16,10 +16,10 @@ set -euo pipefail
 # Configuration
 # =============================================================================
 
-BASE_URL="https://setup.northbuilt.com"
-CONFIG_DIR="$HOME/.northbuilt"
+BASE_URL="https://setup.northbuilt.com/aws"
+CONFIG_DIR="$HOME/.northbuilt/aws"
 LOG_DIR="$HOME/Library/Logs"
-LOG_FILE="$LOG_DIR/northbuilt-config-sync.log"
+LOG_FILE="$LOG_DIR/northbuilt-aws-config-sync.log"
 MAX_LOG_SIZE=1048576  # 1MB
 
 export OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}"
@@ -104,7 +104,7 @@ if [ "$INTERACTIVE" = true ]; then
         --border-foreground 39 \
         --padding "0 2" \
         --margin "1 0" \
-        "Syncing NorthBuilt Configuration..."
+        "Syncing NorthBuilt AWS Configuration..."
 fi
 
 # -----------------------------------------------------------------------------
@@ -151,11 +151,11 @@ if [[ ":$PATH:" != *":$CONFIG_DIR:"* ]]; then
     elif [[ -f "$HOME/.bashrc" ]]; then
         SHELL_PROFILE="$HOME/.bashrc"
     fi
-    if [[ -n "$SHELL_PROFILE" ]] && ! grep -q ".northbuilt" "$SHELL_PROFILE" 2>/dev/null; then
+    if [[ -n "$SHELL_PROFILE" ]] && ! grep -q ".northbuilt/aws" "$SHELL_PROFILE" 2>/dev/null; then
         echo '' >> "$SHELL_PROFILE"
-        echo '# NorthBuilt tools' >> "$SHELL_PROFILE"
-        echo 'export PATH="$HOME/.northbuilt:$PATH"' >> "$SHELL_PROFILE"
-        log_info "Added ~/.northbuilt to PATH in $SHELL_PROFILE"
+        echo '# NorthBuilt AWS tools' >> "$SHELL_PROFILE"
+        echo 'export PATH="$HOME/.northbuilt/aws:$PATH"' >> "$SHELL_PROFILE"
+        log_info "Added ~/.northbuilt/aws to PATH in $SHELL_PROFILE"
     fi
 fi
 
