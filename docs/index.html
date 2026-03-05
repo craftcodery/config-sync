@@ -1,79 +1,10 @@
 #!/usr/bin/env bash
 
+## <script src="./readability.js"></script>
 ## <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" data-manual></script>
 ## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-## <style>
-##   body {
-##     background-color: #1e1e1e;
-##     color: #d4d4d4;
-##     font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
-##     font-size: 14px;
-##     line-height: 1.6;
-##     padding: 2rem;
-##     margin: 0;
-##     white-space: pre-wrap;
-##     word-wrap: break-word;
-##   }
-##   .header {
-##     background: linear-gradient(90deg, #60a5fa, #a78bfa);
-##     -webkit-background-clip: text;
-##     -webkit-text-fill-color: transparent;
-##     background-clip: text;
-##     font-size: 1.5em;
-##     font-weight: bold;
-##     margin-bottom: 1rem;
-##   }
-##   .copy-hint {
-##     position: fixed;
-##     top: 1rem;
-##     right: 1rem;
-##     background: #60a5fa;
-##     color: #1e1e1e;
-##     padding: 0.5rem 1rem;
-##     border-radius: 6px;
-##     font-family: -apple-system, sans-serif;
-##     font-size: 13px;
-##     cursor: pointer;
-##     z-index: 100;
-##   }
-##   .copy-hint:hover { background: #93c5fd; }
-##   code[class*="language-"], pre[class*="language-"] {
-##     background: transparent !important;
-##     text-shadow: none !important;
-##   }
-## </style>
-## <script>
-##   document.addEventListener('DOMContentLoaded', function() {
-##     // Get the raw text content
-##     var content = document.body.textContent;
-##
-##     // Create highlighted code block
-##     var pre = document.createElement('pre');
-##     var code = document.createElement('code');
-##     code.className = 'language-bash';
-##     code.textContent = content;
-##     pre.appendChild(code);
-##
-##     // Create copy button
-##     var btn = document.createElement('div');
-##     btn.className = 'copy-hint';
-##     btn.textContent = 'Copy install command';
-##     btn.onclick = function() {
-##       navigator.clipboard.writeText('curl -fsSL https://setup.northbuilt.com | bash');
-##       btn.textContent = 'Copied!';
-##       setTimeout(function() { btn.textContent = 'Copy install command'; }, 2000);
-##     };
-##
-##     // Replace body content
-##     document.body.innerHTML = '';
-##     document.body.appendChild(btn);
-##     document.body.appendChild(pre);
-##
-##     // Apply syntax highlighting
-##     Prism.highlightElement(code);
-##   });
-## </script>
+## <style>body { background-color: #1d1f21; color: #c5c8c6; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; }</style>
 
 : ==========================================
 :   NorthBuilt Workstation Setup
