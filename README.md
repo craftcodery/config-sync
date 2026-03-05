@@ -10,14 +10,7 @@ Automated AWS configuration for NorthBuilt employee workstations.
 curl -fsSL https://setup.northbuilt.com | bash
 ```
 
-Or visit [setup.northbuilt.com](https://setup.northbuilt.com) in your browser for documentation.
-
-That's it! The setup script will:
-
-1. Install required tools (AWS CLI, 1Password CLI, jq, gum, glow)
-2. Configure 1Password integration
-3. Deploy AWS configuration with all client profiles
-4. Set up automatic hourly sync
+Or visit [setup.northbuilt.com](https://setup.northbuilt.com) in your browser to see the script.
 
 ## Prerequisites
 
@@ -58,17 +51,80 @@ Credentials are fetched automatically from 1Password. MFA codes are retrieved au
 Configurations sync automatically every hour. To force a sync:
 
 ```bash
-~/.craftcodery-config/sync.sh
+~/.northbuilt/sync.sh
 ```
 
 ## Logs
 
 ```bash
-# Sync logs
-cat ~/Library/Logs/craftcodery-config-sync.log
+cat ~/Library/Logs/northbuilt-sync.log
+```
 
-# Launchd service logs
-cat ~/Library/Logs/craftcodery-config-sync-launchd.log
+## How It Works
+
+1. **Setup** (`curl setup.northbuilt.com | bash`)
+   - Installs tools via Homebrew
+   - Downloads sync script to `~/.northbuilt/`
+   - Runs initial sync
+   - Sets up hourly launchd service
+
+2. **Sync** (runs hourly)
+   - Downloads latest AWS config from `setup.northbuilt.com`
+   - Downloads latest helper script
+   - Substitutes MFA serial ARNs from 1Password
+   - Deploys to `~/.aws/config`
+
+3. **AWS commands**
+   - `credential_process` calls the helper script
+   - Helper fetches credentials from 1Password
+   - MFA codes fetched automatically via `mfa_process`
+
+## Architecture
+
+```
+setup.northbuilt.com (GitHub Pages)
+├── index.html        # Setup script
+├── sync.sh           # Sync script
+├── aws-config        # AWS config template
+└── aws-vault-1password  # Credential helper
+
+~/.northbuilt/ (on employee machines)
+├── sync.sh           # Downloaded sync script
+└── aws-vault-1password  # Downloaded helper
+
+~/.aws/config         # Deployed AWS config (with substituted values)
+```
+
+## For Administrators
+
+### Adding a New Client Profile
+
+1. **Create 1Password entry** in the appropriate vault:
+   - Item name: `AWS - Client Name`
+   - Fields: `Access Key ID`, `Secret Access Key`
+   - Optional: One-time password (TOTP), `MFA Serial ARN`
+
+2. **Add profile to `docs/aws-config`:**
+   ```ini
+   [profile clientname]
+   credential_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name"
+   mfa_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name" --otp
+   mfa_serial = __MFA_SERIAL:AWS - Client Name:Vault-Name__
+   region = us-east-1
+   ```
+
+3. **Commit and push** — employees receive the update within an hour
+
+### Files in This Repo
+
+```
+docs/                    # Served via GitHub Pages at setup.northbuilt.com
+├── index.html           # Setup script (dual-purpose: webpage + bash)
+├── readability.js       # Makes script pretty in browsers
+├── sync.sh              # Sync script (downloaded by setup)
+├── aws-config           # AWS config template
+├── aws-vault-1password  # Credential helper script
+└── CNAME                # Custom domain config
 ```
 
 ## Troubleshooting
@@ -80,76 +136,14 @@ cat ~/Library/Logs/craftcodery-config-sync-launchd.log
 3. Enable "Integrate with 1Password CLI"
 4. Re-run setup
 
-### "Could not retrieve item from vault"
+### Credentials not working
 
-You may not have access to the vault. Contact IT to request access.
+Check the 1Password entry has the correct field labels:
+- `Access Key ID` (not `username`)
+- `Secret Access Key` (not `password`)
 
 ### MFA not working
 
-1. Check the 1Password entry has a one-time password configured
-2. Verify `MFA Serial ARN` field is set in the 1Password entry
-3. Run sync to update: `~/.craftcodery-config/sync.sh`
-
-### Credentials not working
-
-Validate the 1Password entry is properly configured:
-
-```bash
-aws-vault-1password "AWS - Client Name" "Vault Name" --validate
-```
-
-## For Administrators
-
-### Adding a New Client Profile
-
-1. **Create 1Password entry** following [docs/1password-aws-standard.md](docs/1password-aws-standard.md)
-
-2. **Validate the entry:**
-   ```bash
-   aws-vault-1password "AWS - New Client" "Vault-Name" --validate
-   ```
-
-3. **Add profile to `aws/config`:**
-   ```ini
-   [profile newclient]
-   credential_process = __HELPER_PATH__ "AWS - New Client" "Vault-Name"
-   mfa_process = __HELPER_PATH__ "AWS - New Client" "Vault-Name" --otp
-   mfa_serial = __MFA_SERIAL:AWS - New Client:Vault-Name__
-   region = us-east-1
-   ```
-
-4. **Commit and push** — employees receive the update within an hour
-
-### Repository Structure
-
-```
-├── README.md                 # This file
-├── setup.sh                  # One-time setup script
-├── sync.sh                   # Config sync (runs hourly)
-├── aws/
-│   └── config                # AWS CLI configuration template
-├── bin/
-│   └── aws-vault-1password   # 1Password credential helper
-├── docs/
-│   ├── index.html            # setup.northbuilt.com (dual-purpose script)
-│   ├── CNAME                 # Custom domain for GitHub Pages
-│   └── 1password-aws-standard.md  # 1Password entry format
-└── launchd/
-    └── com.craftcodery.config-sync.plist  # (Template only)
-```
-
-### How It Works
-
-1. **setup.sh** installs tools, clones this repo, runs initial sync, and sets up the hourly sync service
-
-2. **sync.sh** pulls latest config from GitHub and deploys to `~/.aws/config`, substituting:
-   - `__HELPER_PATH__` → path to helper script
-   - `__MFA_SERIAL:Item:Vault__` → MFA ARN from 1Password
-
-3. **aws-vault-1password** fetches credentials from 1Password when AWS CLI needs them
-
-4. **launchd** runs sync.sh every hour to keep configs up to date
-
-## Support
-
-For issues, contact IT or open an issue in this repository.
+Ensure the 1Password entry has:
+- One-time password (TOTP) configured
+- `MFA Serial ARN` field with the ARN value

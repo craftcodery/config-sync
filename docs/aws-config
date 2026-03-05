@@ -1,0 +1,86 @@
+# =============================================================================
+# NorthBuilt AWS Configuration
+# Managed by: https://github.com/craftcodery/northbuilt-workstation-config
+# Do not edit manually - changes will be overwritten by config sync
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# NorthBuilt Internal Account
+# -----------------------------------------------------------------------------
+
+# Default profile uses 1Password for credentials
+[default]
+credential_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee"
+mfa_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee" --otp
+mfa_serial = __MFA_SERIAL:AWS - NorthBuilt:Employee__
+region = us-east-1
+
+# Explicit northbuilt profile (same as default)
+[profile northbuilt]
+credential_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee"
+mfa_process = __HELPER_PATH__ "AWS - NorthBuilt" "Employee" --otp
+mfa_serial = __MFA_SERIAL:AWS - NorthBuilt:Employee__
+region = us-east-1
+
+# -----------------------------------------------------------------------------
+# TODO: SSO Configuration (not yet set up)
+# -----------------------------------------------------------------------------
+# Once AWS IAM Identity Center is configured, uncomment and update:
+#
+# [profile northbuilt-sso]
+# sso_start_url = https://northbuilt.awsapps.com/start
+# sso_region = us-east-1
+# sso_account_id = YOUR_ACCOUNT_ID
+# sso_role_name = AdministratorAccess
+# region = us-east-1
+
+# =============================================================================
+# Client Accounts
+# Credentials stored in 1Password
+#
+# IMPORTANT: Set OP_ACCOUNT environment variable in your shell profile:
+#   export OP_ACCOUNT="craftcodery.1password.com"
+#
+# Add to ~/.zshrc or ~/.bashrc to make persistent
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Template: Client WITHOUT MFA
+# -----------------------------------------------------------------------------
+# [profile client-example]
+# credential_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name"
+# region = us-east-1
+
+# -----------------------------------------------------------------------------
+# Template: Client WITH MFA
+# -----------------------------------------------------------------------------
+# [profile client-example-mfa]
+# credential_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name"
+# mfa_process = __HELPER_PATH__ "AWS - Example Client" "Vault-Name" --otp
+# mfa_serial = arn:aws:iam::ACCOUNT_ID:mfa/USERNAME
+# region = us-east-1
+
+# -----------------------------------------------------------------------------
+# NorthBuilt Client Accounts
+# -----------------------------------------------------------------------------
+
+# Donate For Dough client account
+[profile donatefordough]
+credential_process = __HELPER_PATH__ "AWS - Donate For Dough" "Donate For Dough"
+mfa_process = __HELPER_PATH__ "AWS - Donate For Dough" "Donate For Dough" --otp
+mfa_serial = __MFA_SERIAL:AWS - Donate For Dough:Donate For Dough__
+region = us-east-1
+
+# Retina Consultants of Minnesota client account
+[profile retina]
+credential_process = __HELPER_PATH__ "AWS - Retina" "Retina Consultants of Minnesota"
+mfa_process = __HELPER_PATH__ "AWS - Retina" "Retina Consultants of Minnesota" --otp
+mfa_serial = __MFA_SERIAL:AWS - Retina:Retina Consultants of Minnesota__
+region = us-east-1
+
+# ACT (Regenatrak) client account
+[profile act]
+credential_process = __HELPER_PATH__ "AWS - ACT" "Regenatrak"
+mfa_process = __HELPER_PATH__ "AWS - ACT" "Regenatrak" --otp
+mfa_serial = __MFA_SERIAL:AWS - ACT:Regenatrak__
+region = us-east-1

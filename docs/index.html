@@ -21,11 +21,9 @@
 #     (Settings → Developer → Integrate with 1Password CLI)
 #
 # What this installs:
-#   - Homebrew (if not installed)
-#   - AWS CLI, jq, gum, glow
-#   - 1Password CLI integration
-#   - AWS credential helper (uses 1Password)
-#   - Hourly config sync service
+#   - Homebrew, AWS CLI, jq, gum, glow, 1Password CLI
+#   - AWS credential helper (fetches credentials from 1Password)
+#   - Hourly sync service (keeps configs up to date)
 #
 # Source code:
 #   https://github.com/craftcodery/northbuilt-workstation-config
@@ -37,7 +35,9 @@
 
 set -euo pipefail
 
-# Colors for output
+BASE_URL="https://setup.northbuilt.com"
+CONFIG_DIR="$HOME/.northbuilt"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -58,14 +58,12 @@ if ! command -v brew &> /dev/null; then
     echo -e "${YELLOW}▶ Installing Homebrew...${NC}"
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-    # Add Homebrew to PATH for this session
     if [[ -f /opt/homebrew/bin/brew ]]; then
         eval "$(/opt/homebrew/bin/brew shellenv)"
     elif [[ -f /usr/local/bin/brew ]]; then
         eval "$(/usr/local/bin/brew shellenv)"
     fi
 
-    # Add to shell profile for future sessions
     SHELL_PROFILE=""
     if [[ -f "$HOME/.zshrc" ]]; then
         SHELL_PROFILE="$HOME/.zshrc"
@@ -173,57 +171,37 @@ if [ -z "${OP_ACCOUNT:-}" ] && [ -n "$SHELL_PROFILE" ]; then
         echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
         export OP_ACCOUNT="craftcodery.1password.com"
 
-        gum style --foreground 42 "✓ OP_ACCOUNT configured in $SHELL_PROFILE"
+        gum style --foreground 42 "✓ OP_ACCOUNT configured"
     else
         gum style --foreground 42 "✓ OP_ACCOUNT already configured"
     fi
 else
     if [ -n "${OP_ACCOUNT:-}" ]; then
-        gum style --foreground 42 "✓ OP_ACCOUNT already set: $OP_ACCOUNT"
+        gum style --foreground 42 "✓ OP_ACCOUNT already set"
     fi
 fi
 
 : ------------------------------------------
-:   Phase 6: Set up config repository
+:   Phase 6: Download sync script
 : ------------------------------------------
-
-CONFIG_DIR="$HOME/.craftcodery-config"
 
 gum style \
     --border rounded \
     --border-foreground 39 \
     --padding "0 2" \
     --margin "1 0" \
-    "Setting up configuration repository..."
+    "Downloading configuration tools..."
 
-# Detect if running from within the repo (local development)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+mkdir -p "$CONFIG_DIR"
 
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/sync.sh" ] && [ -f "$SCRIPT_DIR/bin/aws-vault-1password" ]; then
-    # Running from within the repo - symlink it
-    if [ "$SCRIPT_DIR" != "$CONFIG_DIR" ]; then
-        rm -rf "$CONFIG_DIR" 2>/dev/null || true
-        ln -sf "$SCRIPT_DIR" "$CONFIG_DIR"
-        gum style --foreground 42 "✓ Linked config: $CONFIG_DIR → $SCRIPT_DIR"
-    else
-        gum spin --spinner dot --title "Updating config repository..." -- \
-            git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
-        gum style --foreground 42 "✓ Configuration repository updated"
-    fi
-elif [ -d "$CONFIG_DIR" ]; then
-    # Config dir exists, update it
-    gum spin --spinner dot --title "Updating config repository..." -- \
-        git -C "$CONFIG_DIR" pull --ff-only 2>/dev/null || true
-    gum style --foreground 42 "✓ Configuration repository updated"
-else
-    # Fresh install - clone the repo
-    gum spin --spinner dot --title "Cloning config repository..." -- \
-        git clone https://github.com/craftcodery/northbuilt-workstation-config.git "$CONFIG_DIR"
-    gum style --foreground 42 "✓ Configuration repository cloned"
-fi
+gum spin --spinner dot --title "Downloading sync script..." -- \
+    curl -fsSL "$BASE_URL/sync.sh" -o "$CONFIG_DIR/sync.sh"
+chmod +x "$CONFIG_DIR/sync.sh"
+
+gum style --foreground 42 "✓ Sync script downloaded"
 
 : ------------------------------------------
-:   Phase 7: Deploy configurations
+:   Phase 7: Run initial sync
 : ------------------------------------------
 
 gum style \
@@ -233,9 +211,8 @@ gum style \
     --margin "1 0" \
     "Deploying configurations..."
 
-chmod +x "$CONFIG_DIR/sync.sh"
-gum spin --spinner dot --title "Deploying AWS config and helper scripts..." -- \
-    env CONFIG_DIR="$CONFIG_DIR" OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
+gum spin --spinner dot --title "Syncing AWS config from 1Password..." -- \
+    env OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}" "$CONFIG_DIR/sync.sh"
 
 gum style --foreground 42 "✓ Configurations deployed"
 
@@ -251,7 +228,7 @@ gum style \
     "Setting up automatic sync service..."
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-PLIST_NAME="com.craftcodery.config-sync.plist"
+PLIST_NAME="com.northbuilt.sync.plist"
 LOG_DIR="$HOME/Library/Logs"
 
 mkdir -p "$LAUNCHD_DIR"
@@ -265,13 +242,13 @@ cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.craftcodery.config-sync</string>
+    <string>com.northbuilt.sync</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>-l</string>
         <string>-c</string>
-        <string>$HOME/.craftcodery-config/sync.sh --launchd</string>
+        <string>$CONFIG_DIR/sync.sh --launchd</string>
     </array>
     <key>StartInterval</key>
     <integer>3600</integer>
@@ -296,16 +273,16 @@ cat > "$LAUNCHD_DIR/$PLIST_NAME" << EOF
     <key>WorkingDirectory</key>
     <string>$HOME</string>
     <key>StandardOutPath</key>
-    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+    <string>$LOG_DIR/northbuilt-sync.log</string>
     <key>StandardErrorPath</key>
-    <string>$LOG_DIR/craftcodery-config-sync-launchd.log</string>
+    <string>$LOG_DIR/northbuilt-sync.log</string>
 </dict>
 </plist>
 EOF
 
 launchctl load "$LAUNCHD_DIR/$PLIST_NAME"
 
-gum style --foreground 42 "✓ Automatic sync service configured (runs hourly)"
+gum style --foreground 42 "✓ Automatic sync configured (runs hourly)"
 
 : ==========================================
 :   Setup Complete
@@ -336,9 +313,7 @@ gum style \
     "  aws sts get-caller-identity --profile donatefordough" \
     "" \
     "Sync runs automatically every hour." \
-    "Manual sync: ~/.craftcodery-config/sync.sh" \
-    "View logs:   cat ~/Library/Logs/craftcodery-config-sync.log" \
-    "" \
-    "Documentation: glow ~/.craftcodery-config/README.md"
+    "Manual sync: ~/.northbuilt/sync.sh" \
+    "View logs:   cat ~/Library/Logs/northbuilt-sync.log"
 
 echo ""
