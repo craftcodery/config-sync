@@ -2,6 +2,8 @@
 
 Sets up AWS CLI on employee MacBooks with automatic 1Password credential integration.
 
+![Demo](demo.gif)
+
 ## Quick Start
 
 ```bash
@@ -45,86 +47,151 @@ Credentials are fetched automatically from 1Password. MFA codes are retrieved au
 
 ## Menu Bar App
 
-After setup, the NorthBuilt icon appears in your menu bar with the following options:
+After setup, the NorthBuilt icon appears in your menu bar:
+
+```
+┌─────────────────────────────┐
+│ Status: Synced              │
+│ Last sync: 2 min ago        │
+│ Update Available (v1.3.0)   │  ← Only shown when update ready
+├─────────────────────────────┤
+│ Sync Now              ⌘S    │
+│ Check for Updates...        │
+├─────────────────────────────┤
+│ View Logs...          ⌘L    │
+│ Open AWS Config       ⌘O    │
+├─────────────────────────────┤
+│ Notifications         ✓     │
+│ Launch at Login       ✓     │
+├─────────────────────────────┤
+│ About NorthBuilt Sync       │
+│ Quit                  ⌘Q    │
+└─────────────────────────────┘
+```
+
+### Menu Items
 
 | Item | Description |
 |------|-------------|
-| **Status** | Shows current sync status |
+| **Status** | Current sync status (Synced, Syncing, Error, Waiting for network) |
 | **Last sync** | Time since last successful sync |
 | **Update Available** | Shows when app update is ready (click to install) |
-| **Sync Now** | Manually trigger a sync (Cmd+S) |
+| **Sync Now** | Manually trigger a sync |
 | **Check for Updates...** | Manually check for app updates |
-| **View Logs...** | View sync logs in Terminal |
-| **Open AWS Config** | Open ~/.aws/config in default editor |
-| **Notifications** | Toggle sync failure notifications |
-| **Launch at Login** | Toggle automatic startup |
-| **Quit** | Close the menu bar app |
+| **View Logs...** | Opens Terminal with filtered log output |
+| **Open AWS Config** | Opens ~/.aws/config in default editor |
+| **Notifications** | Toggle failure/update notifications |
+| **Launch at Login** | Toggle automatic startup at login |
+| **About** | Shows version info |
+| **Quit** | Closes the menu bar app |
 
 ### Features
 
-- **Automatic Updates**: App checks for updates every 6 hours and notifies you when available
-- **Self-Updating**: Updates download source, compile locally, and restart automatically
-- **Network-Aware**: Skips sync when offline, resumes when connected
-- **Notifications**: Alerts on sync failures and available updates
-- **Preferences Persistence**: Settings saved across restarts
+| Feature | Description |
+|---------|-------------|
+| **Hourly Sync** | AWS config syncs automatically every hour |
+| **Automatic Updates** | App checks for updates every 6 hours |
+| **Self-Updating** | Updates download source, compile locally, restart automatically |
+| **Network-Aware** | Skips sync when offline, resumes when connected |
+| **Notifications** | Alerts on sync failures and available updates |
+| **Launch at Login** | Uses macOS native SMAppService (System Settings visible) |
+| **Preferences** | Settings persist across app restarts |
 
 ## Logs
 
-View sync logs in Console.app. Filter by subsystem:
-```
-com.northbuilt.sync
-```
+View sync logs via the menu bar app (View Logs...) or manually:
 
-Or via command line:
 ```bash
-log show --predicate 'subsystem == "com.northbuilt.sync"' --last 1h
+# Last hour of logs
+log show --predicate 'subsystem == "com.northbuilt.sync"' --last 1h --style compact
+
+# Stream live logs
+log stream --predicate 'subsystem == "com.northbuilt.sync"'
 ```
 
 ## How It Works
 
-1. **Setup** (`curl setup.northbuilt.com/aws | bash`)
-   - Installs tools via Homebrew
-   - Compiles native Swift applications
-   - Creates menu bar app bundle
-   - Launches menu bar app
-   - Runs initial sync
+### Initial Setup
 
-2. **Menu Bar App** (runs continuously)
-   - Syncs every hour automatically
-   - Downloads latest AWS config from `setup.northbuilt.com/aws`
-   - Compiles credential helper from source
-   - Substitutes MFA serial ARNs from 1Password
-   - Deploys to `~/.aws/config`
+```bash
+curl -fsSL https://setup.northbuilt.com/aws | bash
+```
 
-3. **AWS commands**
-   - `credential_process` calls the credential helper
-   - Helper fetches credentials from 1Password
-   - MFA codes fetched automatically via `mfa_process`
+1. Installs Homebrew (if needed)
+2. Installs tools: AWS CLI, jq, gum, glow, 1Password CLI
+3. Downloads Swift source files
+4. Compiles `aws-vault-1password` credential helper
+5. Compiles `NorthBuiltSync.app` menu bar app
+6. Creates app bundle with icons
+7. Launches app and runs initial sync
+
+### Hourly Sync Process
+
+1. Check network connectivity (skip if offline)
+2. Download `aws-config` template from GitHub Pages
+3. Validate template (reject suspicious patterns)
+4. Substitute `__HELPER_PATH__` with local path
+5. Fetch MFA serial ARNs from 1Password (parallel)
+6. Substitute `__MFA_SERIAL:Item:Vault__` placeholders
+7. Write to `~/.aws/config` with 600 permissions
+8. Update menu status
+
+### AWS Command Flow
+
+```
+aws s3 ls
+    ↓
+AWS CLI reads ~/.aws/config
+    ↓
+credential_process = ~/.northbuilt/aws/aws-vault-1password "Item" "Vault"
+    ↓
+Helper calls: op item get "Item" --vault "Vault" --format json
+    ↓
+1Password returns credentials (prompts for auth if needed)
+    ↓
+Helper outputs JSON: {"Version":1,"AccessKeyId":"...","SecretAccessKey":"..."}
+    ↓
+AWS CLI uses credentials for API call
+```
+
+### Self-Update Process
+
+1. App checks `version.json` every 6 hours
+2. If new version available, shows "Update Available" in menu
+3. User clicks update → confirmation dialog with release notes
+4. App downloads new Swift source files
+5. Compiles locally with `swiftc -O`
+6. Backs up current binary
+7. Replaces binary, helper, and icons
+8. Restarts automatically
 
 ## Architecture
 
 ```
 setup.northbuilt.com/aws/ (GitHub Pages)
-├── index.html                  # Setup script
-├── version.json                # App version info for auto-updates
-├── aws-config                  # AWS config template
-├── aws-vault-1password.swift   # Credential helper source
-├── NorthBuiltSync.swift        # Menu bar app source
-├── AppIcon.icns                # App icon
-├── MenuBarIcon.png             # Menu bar icon
+├── index.html                  # Setup script (bash)
+├── version.json                # Version info for auto-updates
+├── aws-config                  # AWS config template with placeholders
+├── aws-vault-1password.swift   # Credential helper source (~340 lines)
+├── NorthBuiltSync.swift        # Menu bar app source (~1150 lines)
+├── AppIcon.icns                # App icon (Finder, Activity Monitor)
+├── MenuBarIcon.png             # Menu bar icon (18x18 @2x)
+├── 1password-standard.md       # 1Password entry documentation
+├── demo.gif                    # Animated demo for README
+├── demo.tape                   # VHS tape file (regenerate with: vhs demo.tape)
 └── readability.js              # Makes script pretty in browsers
 
 ~/.northbuilt/aws/ (on employee machines)
-├── NorthBuiltSync.app/         # Menu bar app (runs continuously)
+├── NorthBuiltSync.app/         # Menu bar app bundle
 │   └── Contents/
-│       ├── MacOS/NorthBuiltSync
+│       ├── MacOS/NorthBuiltSync    # Compiled binary
 │       ├── Resources/
 │       │   ├── AppIcon.icns
 │       │   └── MenuBarIcon.png
 │       └── Info.plist
 └── aws-vault-1password         # Compiled credential helper
 
-~/.aws/config                   # Deployed AWS config (with substituted values)
+~/.aws/config                   # Deployed AWS config (synced hourly)
 ```
 
 ## For Administrators
@@ -135,7 +202,7 @@ setup.northbuilt.com/aws/ (GitHub Pages)
    - Item name: `AWS - Client Name`
    - Fields: `Access Key ID`, `Secret Access Key`
    - Optional: One-time password (TOTP), `MFA Serial ARN`
-   - See [1password-standard.md](1password-standard.md) for details
+   - See [1password-standard.md](1password-standard.md) for field details
 
 2. **Add profile to `aws-config`:**
    ```ini
@@ -146,20 +213,37 @@ setup.northbuilt.com/aws/ (GitHub Pages)
    region = us-east-1
    ```
 
-3. **Commit and push** — employees receive the update within an hour
+3. **Commit and push** — employees receive the config update within an hour
 
-### Files
+### Releasing App Updates
+
+1. Make changes to `NorthBuiltSync.swift` or `aws-vault-1password.swift`
+2. Update `version.json`:
+   ```json
+   {
+     "version": "1.3.0",
+     "build": 4,
+     "releaseDate": "2026-03-06",
+     "releaseNotes": "Description of changes for users."
+   }
+   ```
+3. Commit and push (requires 2+ approvals)
+4. Employees receive update notification within 6 hours
+
+### Files Reference
 
 | File | Purpose |
 |------|---------|
 | `index.html` | Setup script (dual-purpose: webpage + bash) |
-| `version.json` | App version info for auto-updates |
+| `version.json` | Version info for auto-updates |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password.swift` | Credential helper source |
 | `NorthBuiltSync.swift` | Menu bar app source |
-| `AppIcon.icns` | App icon (Finder, Activity Monitor) |
-| `MenuBarIcon.png` | Menu bar icon |
-| `readability.js` | Makes script pretty in browsers |
+| `AppIcon.icns` | App icon (multi-resolution) |
+| `MenuBarIcon.png` | Menu bar icon (36x36 for retina) |
+| `demo.gif` | Animated demo for README |
+| `demo.tape` | VHS source file for regenerating demo |
+| `readability.js` | Syntax highlighting for browser viewing |
 | `1password-standard.md` | 1Password entry format documentation |
 
 ## Troubleshooting
@@ -190,11 +274,9 @@ Ensure the 1Password entry has:
 
 ### "op would like to access data from other apps"
 
-This macOS prompt appears when the 1Password CLI first communicates with the 1Password app.
+This macOS prompt appears when 1Password CLI first communicates with the 1Password app.
 
 **For the menu bar app:**
-The app runs as `NorthBuilt Sync`, so macOS remembers your permission choice:
-
 1. When the prompt appears, click **Allow**
 2. The permission persists - you won't be asked again
 
@@ -203,30 +285,49 @@ If you clicked "Don't Allow":
 2. Find "NorthBuilt Sync" and enable the toggle for "1Password"
 
 **For terminal usage:**
-If prompted when running `aws` commands directly:
-
 1. Click **Allow** when prompted
-2. If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation
-3. Find your terminal app (Terminal, iTerm, etc.) and enable the toggle for "1Password"
+2. If you clicked "Don't Allow", find your terminal app in Automation settings
 
 ### Menu bar icon not showing
 
 1. Check if the app is running: `pgrep -f NorthBuiltSync`
 2. If not running, launch it: `open ~/.northbuilt/aws/NorthBuiltSync.app`
-3. Check for compilation errors in Console.app
+3. On MacBooks with notch: Cmd-drag menu bar icons to reorder (move NorthBuilt left)
+4. Check logs: View Logs... from another menu bar app or Terminal
 
 ### Sync fails with "1Password may be locked"
 
 1. Open 1Password app to unlock it
 2. Click "Sync Now" in the menu bar app
-3. If it still fails, check logs in Console.app
+3. If it still fails, check logs
 
-## Migration from Previous Version
+### Sync fails with "Waiting for network"
 
-If you were using the previous bash-based system:
+The app detected no network connectivity. It will automatically retry when connection is restored.
+
+### Update fails
+
+1. Check logs for specific error
+2. If compilation failed, ensure Xcode Command Line Tools are installed:
+   ```bash
+   xcode-select --install
+   ```
+3. Try manual update by re-running setup script
+
+## Migration
+
+### From Previous Bash-Based System
+
 1. Re-run the setup script: `curl -fsSL https://setup.northbuilt.com/aws | bash`
 2. The script automatically removes the old launchd service
 3. The menu bar app replaces the background sync service
+
+### From NorthBuiltAWSSync to NorthBuiltSync
+
+The app was renamed. Re-running setup will:
+1. Remove old `NorthBuiltAWSSync.app`
+2. Install new `NorthBuiltSync.app`
+3. Preserve your settings
 
 ## Uninstalling
 
@@ -239,4 +340,7 @@ rm -rf ~/.northbuilt/aws
 
 # Optionally remove AWS config
 rm -f ~/.aws/config
+
+# Remove shell profile additions (optional)
+# Edit ~/.zshrc and remove OP_ACCOUNT and PATH lines
 ```
