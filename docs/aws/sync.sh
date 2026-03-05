@@ -3,9 +3,8 @@
 # Downloads latest configs from setup.northbuilt.com/aws and deploys them
 #
 # Usage:
-#   sync.sh              # Interactive mode
-#   sync.sh --launchd    # Background mode (for launchd service)
-#   sync.sh --verbose    # Verbose output
+#   sync.sh            # Normal (logs to file)
+#   sync.sh --verbose  # Also prints to stdout
 #
 # This script is downloaded and run by the setup process.
 # It fetches configs from GitHub Pages (no git required).
@@ -28,13 +27,10 @@ export OP_ACCOUNT="${OP_ACCOUNT:-craftcodery.1password.com}"
 # Parse Arguments
 # =============================================================================
 
-LAUNCHD_MODE=false
 VERBOSE=false
-
 for arg in "$@"; do
     case $arg in
-        --launchd) LAUNCHD_MODE=true; VERBOSE=true ;;
-        --verbose|-v) VERBOSE=true ;;
+        --verbose|-v|--launchd) VERBOSE=true ;;
     esac
 done
 
@@ -57,36 +53,13 @@ log() {
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
     if [ "$VERBOSE" = true ]; then
-        echo "[$timestamp] [$level] $message"
+        echo "[$level] $message"
     fi
 }
 
 log_info() { log "INFO" "$1"; }
 log_debug() { log "DEBUG" "$1"; }
 log_error() { log "ERROR" "$1"; }
-
-# =============================================================================
-# UI (only in interactive mode)
-# =============================================================================
-
-INTERACTIVE=false
-if [ -t 1 ] && [ "$LAUNCHD_MODE" = false ] && command -v gum &> /dev/null; then
-    INTERACTIVE=true
-fi
-
-show() {
-    log_info "$1"
-    if [ "$INTERACTIVE" = true ]; then
-        gum style --foreground 42 "✓ $1"
-    fi
-}
-
-show_error() {
-    log_error "$1"
-    if [ "$INTERACTIVE" = true ]; then
-        gum style --foreground 196 "✗ $1"
-    fi
-}
 
 # =============================================================================
 # Main Sync Logic
@@ -97,15 +70,6 @@ log_info "Starting config sync"
 log_info "BASE_URL: $BASE_URL"
 log_info "CONFIG_DIR: $CONFIG_DIR"
 log_info "=========================================="
-
-if [ "$INTERACTIVE" = true ]; then
-    gum style \
-        --border rounded \
-        --border-foreground 39 \
-        --padding "0 2" \
-        --margin "1 0" \
-        "Syncing NorthBuilt AWS Configuration..."
-fi
 
 # -----------------------------------------------------------------------------
 # Step 1: Update sync script itself
@@ -138,9 +102,9 @@ HELPER_PATH="$CONFIG_DIR/aws-vault-1password"
 if curl -fsSL "$BASE_URL/aws-vault-1password" -o "$HELPER_PATH.tmp" 2>/dev/null; then
     mv "$HELPER_PATH.tmp" "$HELPER_PATH"
     chmod +x "$HELPER_PATH"
-    show "Downloaded aws-vault-1password"
+    log_info "Downloaded aws-vault-1password"
 else
-    show_error "Failed to download aws-vault-1password"
+    log_error "Failed to download aws-vault-1password"
 fi
 
 # Ensure config dir is in PATH
@@ -169,7 +133,7 @@ mkdir -p "$HOME/.aws"
 if curl -fsSL "$BASE_URL/aws-config" -o "$HOME/.aws/config.tmp" 2>/dev/null; then
     log_debug "Downloaded aws-config template"
 else
-    show_error "Failed to download aws-config"
+    log_error "Failed to download aws-config"
     exit 1
 fi
 
@@ -263,7 +227,7 @@ fi
 mv "$HOME/.aws/config.tmp" "$HOME/.aws/config"
 rm -f "$HOME/.aws/config.tmp.bak"
 chmod 600 "$HOME/.aws/config"
-show "Deployed ~/.aws/config"
+log_info "Deployed ~/.aws/config"
 
 # -----------------------------------------------------------------------------
 # Done
@@ -271,9 +235,3 @@ show "Deployed ~/.aws/config"
 
 log_info "Sync complete"
 log_info "=========================================="
-
-if [ "$INTERACTIVE" = true ]; then
-    echo ""
-    gum style --foreground 42 --bold "✓ Sync complete!"
-    echo ""
-fi
