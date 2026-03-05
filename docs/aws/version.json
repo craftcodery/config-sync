@@ -1,0 +1,13 @@
+{
+  "version": "1.2.0",
+  "build": 3,
+  "minimumOS": "12.0",
+  "releaseDate": "2026-03-05",
+  "releaseNotes": "Added self-updating capability and quality of life improvements.",
+  "files": {
+    "app": "NorthBuiltSync.swift",
+    "helper": "aws-vault-1password.swift",
+    "icon": "AppIcon.icns",
+    "menuBarIcon": "MenuBarIcon.png"
+  }
+}

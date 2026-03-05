@@ -45,23 +45,28 @@ Credentials are fetched automatically from 1Password. MFA codes are retrieved au
 
 ## Menu Bar App
 
-After setup, a cloud icon appears in your menu bar with the following options:
+After setup, the NorthBuilt icon appears in your menu bar with the following options:
 
 | Item | Description |
 |------|-------------|
 | **Status** | Shows current sync status |
 | **Last sync** | Time since last successful sync |
+| **Update Available** | Shows when app update is ready (click to install) |
 | **Sync Now** | Manually trigger a sync (Cmd+S) |
-| **View Logs...** | Open Console.app for debug logs |
+| **Check for Updates...** | Manually check for app updates |
+| **View Logs...** | View sync logs in Terminal |
 | **Open AWS Config** | Open ~/.aws/config in default editor |
+| **Notifications** | Toggle sync failure notifications |
 | **Launch at Login** | Toggle automatic startup |
 | **Quit** | Close the menu bar app |
 
-### Status Icons
+### Features
 
-- **Cloud** - Idle/success
-- **Rotating arrows** - Syncing in progress
-- **Warning triangle** - Sync error (check logs)
+- **Automatic Updates**: App checks for updates every 6 hours and notifies you when available
+- **Self-Updating**: Updates download source, compile locally, and restart automatically
+- **Network-Aware**: Skips sync when offline, resumes when connected
+- **Notifications**: Alerts on sync failures and available updates
+- **Preferences Persistence**: Settings saved across restarts
 
 ## Logs
 
@@ -101,15 +106,21 @@ log show --predicate 'subsystem == "com.northbuilt.sync"' --last 1h
 ```
 setup.northbuilt.com/aws/ (GitHub Pages)
 ├── index.html                  # Setup script
+├── version.json                # App version info for auto-updates
 ├── aws-config                  # AWS config template
 ├── aws-vault-1password.swift   # Credential helper source
-├── NorthBuiltSync.swift     # Menu bar app source
+├── NorthBuiltSync.swift        # Menu bar app source
+├── AppIcon.icns                # App icon
+├── MenuBarIcon.png             # Menu bar icon
 └── readability.js              # Makes script pretty in browsers
 
 ~/.northbuilt/aws/ (on employee machines)
-├── NorthBuiltSync.app/      # Menu bar app (runs continuously)
+├── NorthBuiltSync.app/         # Menu bar app (runs continuously)
 │   └── Contents/
 │       ├── MacOS/NorthBuiltSync
+│       ├── Resources/
+│       │   ├── AppIcon.icns
+│       │   └── MenuBarIcon.png
 │       └── Info.plist
 └── aws-vault-1password         # Compiled credential helper
 
@@ -142,9 +153,12 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 | File | Purpose |
 |------|---------|
 | `index.html` | Setup script (dual-purpose: webpage + bash) |
+| `version.json` | App version info for auto-updates |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password.swift` | Credential helper source |
 | `NorthBuiltSync.swift` | Menu bar app source |
+| `AppIcon.icns` | App icon (Finder, Activity Monitor) |
+| `MenuBarIcon.png` | Menu bar icon |
 | `readability.js` | Makes script pretty in browsers |
 | `1password-standard.md` | 1Password entry format documentation |
 

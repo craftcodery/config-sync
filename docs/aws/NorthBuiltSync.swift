@@ -8,6 +8,13 @@ import Network
 
 private let logger = Logger(subsystem: "com.northbuilt.sync", category: "sync")
 
+// MARK: - Version
+
+private enum AppVersion {
+    static let current = "1.2.0"
+    static let build = 3
+}
+
 // MARK: - Configuration
 
 private enum Config {
@@ -16,6 +23,7 @@ private enum Config {
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
     static let defaultSyncInterval: TimeInterval = 3600 // 1 hour
+    static let updateCheckInterval: TimeInterval = 21600 // 6 hours
     static let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "craftcodery.1password.com"
 }
 
@@ -31,6 +39,8 @@ class Preferences {
         static let syncInterval = "syncInterval"
         static let lastSyncDate = "lastSyncDate"
         static let consecutiveFailures = "consecutiveFailures"
+        static let lastUpdateCheck = "lastUpdateCheck"
+        static let skippedVersion = "skippedVersion"
     }
 
     var notificationsEnabled: Bool {
@@ -54,6 +64,16 @@ class Preferences {
     var consecutiveFailures: Int {
         get { defaults.integer(forKey: Keys.consecutiveFailures) }
         set { defaults.set(newValue, forKey: Keys.consecutiveFailures) }
+    }
+
+    var lastUpdateCheck: Date? {
+        get { defaults.object(forKey: Keys.lastUpdateCheck) as? Date }
+        set { defaults.set(newValue, forKey: Keys.lastUpdateCheck) }
+    }
+
+    var skippedVersion: String? {
+        get { defaults.string(forKey: Keys.skippedVersion) }
+        set { defaults.set(newValue, forKey: Keys.skippedVersion) }
     }
 }
 
@@ -111,7 +131,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
-            trigger: nil // Deliver immediately
+            trigger: nil
         )
 
         UNUserNotificationCenter.current().add(request) { error in
@@ -121,11 +141,337 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    // Handle notification when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
+    }
+}
+
+// MARK: - Update Manager
+
+class UpdateManager {
+    static let shared = UpdateManager()
+
+    struct VersionInfo: Codable {
+        let version: String
+        let build: Int
+        let minimumOS: String
+        let releaseDate: String
+        let releaseNotes: String
+        let files: Files
+
+        struct Files: Codable {
+            let app: String
+            let helper: String
+            let icon: String
+            let menuBarIcon: String
+        }
+    }
+
+    enum UpdateError: Error, LocalizedError {
+        case networkError(String)
+        case parseError
+        case downloadFailed(String)
+        case compilationFailed(String)
+        case installationFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .networkError(let msg): return "Network error: \(msg)"
+            case .parseError: return "Failed to parse version info"
+            case .downloadFailed(let file): return "Failed to download \(file)"
+            case .compilationFailed(let msg): return "Compilation failed: \(msg)"
+            case .installationFailed(let msg): return "Installation failed: \(msg)"
+            }
+        }
+    }
+
+    enum UpdateStatus {
+        case checking
+        case upToDate
+        case available(VersionInfo)
+        case downloading
+        case compiling
+        case installing
+        case failed(Error)
+    }
+
+    private(set) var status: UpdateStatus = .upToDate
+    private(set) var latestVersion: VersionInfo?
+
+    var updateAvailable: Bool {
+        if case .available = status { return true }
+        return false
+    }
+
+    var isUpdateInProgress: Bool {
+        switch status {
+        case .downloading, .compiling, .installing:
+            return true
+        default:
+            return false
+        }
+    }
+
+    func checkForUpdates() async -> VersionInfo? {
+        guard NetworkMonitor.shared.isConnected else {
+            logger.notice("Update check skipped: no network")
+            return nil
+        }
+
+        status = .checking
+        logger.notice("Checking for updates...")
+
+        do {
+            let versionInfo = try await fetchVersionInfo()
+            latestVersion = versionInfo
+            Preferences.shared.lastUpdateCheck = Date()
+
+            if isNewerVersion(versionInfo.version) {
+                // Check if user skipped this version
+                if Preferences.shared.skippedVersion == versionInfo.version {
+                    logger.notice("Update v\(versionInfo.version) available but skipped by user")
+                    status = .upToDate
+                    return nil
+                }
+
+                logger.notice("Update available: v\(versionInfo.version)")
+                status = .available(versionInfo)
+                return versionInfo
+            } else {
+                logger.notice("App is up to date (v\(AppVersion.current))")
+                status = .upToDate
+                return nil
+            }
+        } catch {
+            logger.error("Update check failed: \(error.localizedDescription)")
+            status = .failed(error)
+            return nil
+        }
+    }
+
+    private func fetchVersionInfo() async throws -> VersionInfo {
+        guard let url = URL(string: "\(Config.baseURL)/version.json") else {
+            throw UpdateError.networkError("Invalid URL")
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw UpdateError.networkError("HTTP error")
+        }
+
+        let decoder = JSONDecoder()
+        guard let versionInfo = try? decoder.decode(VersionInfo.self, from: data) else {
+            throw UpdateError.parseError
+        }
+
+        return versionInfo
+    }
+
+    private func isNewerVersion(_ remoteVersion: String) -> Bool {
+        let remote = remoteVersion.split(separator: ".").compactMap { Int($0) }
+        let local = AppVersion.current.split(separator: ".").compactMap { Int($0) }
+
+        for i in 0..<max(remote.count, local.count) {
+            let r = i < remote.count ? remote[i] : 0
+            let l = i < local.count ? local[i] : 0
+            if r > l { return true }
+            if r < l { return false }
+        }
+        return false
+    }
+
+    func performUpdate(progressHandler: @escaping (String) -> Void) async throws {
+        guard let versionInfo = latestVersion else {
+            throw UpdateError.networkError("No version info available")
+        }
+
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("NorthBuiltSync-update-\(UUID().uuidString)")
+
+        do {
+            // Create temp directory
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            logger.notice("Update temp directory: \(tempDir.path)")
+
+            // Download source files
+            status = .downloading
+            progressHandler("Downloading update...")
+
+            let appSourceURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.app)")!
+            let appSourcePath = tempDir.appendingPathComponent("NorthBuiltSync.swift")
+            try await downloadFile(from: appSourceURL, to: appSourcePath)
+            logger.notice("Downloaded app source")
+
+            // Download helper source
+            let helperSourceURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.helper)")!
+            let helperSourcePath = tempDir.appendingPathComponent("aws-vault-1password.swift")
+            try await downloadFile(from: helperSourceURL, to: helperSourcePath)
+            logger.notice("Downloaded helper source")
+
+            // Download icons
+            let iconURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.icon)")!
+            let iconPath = tempDir.appendingPathComponent("AppIcon.icns")
+            try await downloadFile(from: iconURL, to: iconPath)
+
+            let menuBarIconURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.menuBarIcon)")!
+            let menuBarIconPath = tempDir.appendingPathComponent("MenuBarIcon.png")
+            try await downloadFile(from: menuBarIconURL, to: menuBarIconPath)
+            logger.notice("Downloaded icons")
+
+            // Compile app
+            status = .compiling
+            progressHandler("Compiling update...")
+
+            let compiledAppPath = tempDir.appendingPathComponent("NorthBuiltSync")
+            try await compileSwift(source: appSourcePath, output: compiledAppPath)
+            logger.notice("Compiled app")
+
+            // Compile helper
+            let compiledHelperPath = tempDir.appendingPathComponent("aws-vault-1password")
+            try await compileSwift(source: helperSourcePath, output: compiledHelperPath)
+            logger.notice("Compiled helper")
+
+            // Install update
+            status = .installing
+            progressHandler("Installing update...")
+
+            // Get app bundle paths
+            guard let appBundle = Bundle.main.bundlePath as String?,
+                  let executablePath = Bundle.main.executablePath else {
+                throw UpdateError.installationFailed("Could not determine app paths")
+            }
+
+            let resourcesPath = (appBundle as NSString).appendingPathComponent("Contents/Resources")
+
+            // Backup current executable
+            let backupPath = executablePath + ".backup"
+            if FileManager.default.fileExists(atPath: backupPath) {
+                try FileManager.default.removeItem(atPath: backupPath)
+            }
+            try FileManager.default.copyItem(atPath: executablePath, toPath: backupPath)
+            logger.notice("Backed up current executable")
+
+            // Replace executable
+            try FileManager.default.removeItem(atPath: executablePath)
+            try FileManager.default.copyItem(at: compiledAppPath, to: URL(fileURLWithPath: executablePath))
+            logger.notice("Replaced app executable")
+
+            // Replace helper
+            let helperInstallPath = Config.configDir.appendingPathComponent(Config.helperName)
+            if FileManager.default.fileExists(atPath: helperInstallPath.path) {
+                try FileManager.default.removeItem(at: helperInstallPath)
+            }
+            try FileManager.default.copyItem(at: compiledHelperPath, to: helperInstallPath)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperInstallPath.path)
+            logger.notice("Replaced helper")
+
+            // Replace icons
+            let appIconInstallPath = URL(fileURLWithPath: resourcesPath).appendingPathComponent("AppIcon.icns")
+            let menuBarIconInstallPath = URL(fileURLWithPath: resourcesPath).appendingPathComponent("MenuBarIcon.png")
+
+            if FileManager.default.fileExists(atPath: appIconInstallPath.path) {
+                try FileManager.default.removeItem(at: appIconInstallPath)
+            }
+            try FileManager.default.copyItem(at: iconPath, to: appIconInstallPath)
+
+            if FileManager.default.fileExists(atPath: menuBarIconInstallPath.path) {
+                try FileManager.default.removeItem(at: menuBarIconInstallPath)
+            }
+            try FileManager.default.copyItem(at: menuBarIconPath, to: menuBarIconInstallPath)
+            logger.notice("Replaced icons")
+
+            // Clean up temp directory
+            try? FileManager.default.removeItem(at: tempDir)
+
+            // Clean up backup (update successful)
+            try? FileManager.default.removeItem(atPath: backupPath)
+
+            // Clear skipped version
+            Preferences.shared.skippedVersion = nil
+
+            logger.notice("Update to v\(versionInfo.version) completed successfully")
+
+            // Send notification
+            NotificationManager.shared.sendNotification(
+                title: "NorthBuilt Sync Updated",
+                body: "Updated to v\(versionInfo.version). Restarting..."
+            )
+
+            // Relaunch after a short delay
+            progressHandler("Restarting...")
+            try await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+
+            relaunchApp()
+
+        } catch {
+            // Clean up on failure
+            try? FileManager.default.removeItem(at: tempDir)
+
+            status = .failed(error)
+            logger.error("Update failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func downloadFile(from url: URL, to destination: URL) async throws {
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw UpdateError.downloadFailed(url.lastPathComponent)
+        }
+
+        try data.write(to: destination)
+    }
+
+    private func compileSwift(source: URL, output: URL) async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/swiftc")
+        process.arguments = ["-O", "-o", output.path, source.path]
+
+        let stderr = Pipe()
+        process.standardError = stderr
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            throw UpdateError.compilationFailed("swiftc not found")
+        }
+
+        if process.terminationStatus != 0 {
+            let errorData = stderr.fileHandleForReading.readDataToEndOfFile()
+            let errorMsg = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+            throw UpdateError.compilationFailed(errorMsg)
+        }
+    }
+
+    private func relaunchApp() {
+        guard let appPath = Bundle.main.bundlePath as String? else { return }
+
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        task.arguments = ["-n", appPath, "--args", "--relaunched"]
+
+        do {
+            try task.run()
+        } catch {
+            logger.error("Failed to relaunch: \(error.localizedDescription)")
+        }
+
+        // Exit current instance
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApplication.shared.terminate(nil)
+        }
+    }
+
+    func skipVersion(_ version: String) {
+        Preferences.shared.skippedVersion = version
+        status = .upToDate
+        logger.notice("Skipped update v\(version)")
     }
 }
 
@@ -237,7 +583,6 @@ actor SyncEngine {
     private let opCLI = OnePasswordCLI()
 
     func sync() async -> SyncResult {
-        // Check network connectivity first
         guard NetworkMonitor.shared.isConnected else {
             logger.notice("Sync skipped: no network connection")
             return SyncResult(
@@ -252,26 +597,20 @@ actor SyncEngine {
         logger.notice("Starting sync")
 
         do {
-            // Ensure directories exist
             try FileManager.default.createDirectory(at: Config.configDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(
                 at: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws"),
                 withIntermediateDirectories: true
             )
 
-            // Check 1Password authentication
             try await opCLI.checkAuthenticated()
             logger.notice("1Password authenticated")
 
-            // Helper path (installed during setup, not updated during sync)
             let helperPath = Config.configDir.appendingPathComponent(Config.helperName)
 
-            // Download AWS config template
             let configTemplate = try await downloadString(from: "\(Config.baseURL)/aws-config")
             logger.notice("Downloaded aws-config template")
 
-            // Security: Validate config template before substitution
-            // Reject configs containing shell commands or suspicious patterns
             let suspiciousPatterns = ["curl ", "wget ", "/bin/sh", "/bin/bash", "&&", "||", "; "]
             for pattern in suspiciousPatterns {
                 if configTemplate.contains(pattern) {
@@ -286,10 +625,8 @@ actor SyncEngine {
                 }
             }
 
-            // Substitute __HELPER_PATH__
             var config = configTemplate.replacingOccurrences(of: "__HELPER_PATH__", with: helperPath.path)
 
-            // Find and substitute MFA serial placeholders
             let mfaPattern = try NSRegularExpression(pattern: "__MFA_SERIAL:([^:]+):([^_]+)__")
             let matches = mfaPattern.matches(in: config, range: NSRange(config.startIndex..., in: config))
 
@@ -309,7 +646,6 @@ actor SyncEngine {
 
             logger.notice("Found \(placeholders.count) MFA placeholders")
 
-            // Fetch MFA serials in parallel
             var mfaSuccess = 0
             await withTaskGroup(of: (String, String?).self) { group in
                 for placeholder in placeholders {
@@ -318,7 +654,6 @@ actor SyncEngine {
                             let serial = try await self.opCLI.getMFASerial(item: placeholder.item, vault: placeholder.vault)
                             return (placeholder.full, serial)
                         } catch {
-                            // Use privacy: .private to redact item names in logs
                             logger.error("Failed to fetch MFA for item: \(placeholder.item, privacy: .private)")
                             return (placeholder.full, nil)
                         }
@@ -334,7 +669,6 @@ actor SyncEngine {
                 }
             }
 
-            // Check for unsubstituted placeholders
             if config.contains("__MFA_SERIAL:") {
                 logger.error("Config has unsubstituted MFA placeholders")
                 return SyncResult(
@@ -346,7 +680,6 @@ actor SyncEngine {
                 )
             }
 
-            // Write config
             try config.write(to: Config.awsConfigPath, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: Config.awsConfigPath.path)
             logger.notice("Deployed ~/.aws/config")
@@ -389,7 +722,6 @@ actor SyncEngine {
 
         return string
     }
-
 }
 
 // MARK: - AppDelegate
@@ -397,6 +729,7 @@ actor SyncEngine {
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var syncTimer: Timer?
+    private var updateCheckTimer: Timer?
     private var lastSyncTime: Date?
     private var lastSyncSuccess: Bool = true
     private var isSyncing: Bool = false
@@ -406,17 +739,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusMenu: NSMenu!
     private var statusMenuItem: NSMenuItem!
     private var lastSyncMenuItem: NSMenuItem!
+    private var updateMenuItem: NSMenuItem!
     private var launchAtLoginMenuItem: NSMenuItem!
     private var notificationsMenuItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Start network monitoring
+        // Check if relaunched after update
+        if CommandLine.arguments.contains("--relaunched") {
+            logger.notice("App relaunched after update")
+        }
+
         NetworkMonitor.shared.start()
-
-        // Request notification permission
         NotificationManager.shared.requestPermission()
-
-        // Restore last sync time from preferences
         lastSyncTime = Preferences.shared.lastSyncDate
 
         setupStatusItem()
@@ -427,8 +761,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await performSync()
         }
 
-        // Schedule sync based on preference
+        // Check for updates on launch
+        Task {
+            await checkForUpdates()
+        }
+
         scheduleSyncTimer()
+        scheduleUpdateCheckTimer()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -444,17 +783,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func scheduleUpdateCheckTimer() {
+        updateCheckTimer?.invalidate()
+        updateCheckTimer = Timer.scheduledTimer(withTimeInterval: Config.updateCheckInterval, repeats: true) { [weak self] _ in
+            Task {
+                await self?.checkForUpdates()
+            }
+        }
+    }
+
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
-            // Load custom icon from app bundle Resources
             if let iconPath = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
                let icon = NSImage(contentsOfFile: iconPath) {
                 icon.size = NSSize(width: 18, height: 18)
                 button.image = icon
             } else {
-                // Fallback to text if image not found
                 button.title = "NB"
             }
         }
@@ -474,6 +820,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(lastSyncMenuItem)
         updateLastSyncTime()
 
+        // Update available (hidden by default)
+        updateMenuItem = NSMenuItem(title: "Update Available", action: #selector(updateClicked), keyEquivalent: "u")
+        updateMenuItem.keyEquivalentModifierMask = .command
+        updateMenuItem.target = self
+        updateMenuItem.isHidden = true
+        statusMenu.addItem(updateMenuItem)
+
         statusMenu.addItem(NSMenuItem.separator())
 
         // Sync Now
@@ -481,6 +834,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncNowItem.keyEquivalentModifierMask = .command
         syncNowItem.target = self
         statusMenu.addItem(syncNowItem)
+
+        // Check for Updates
+        let checkUpdatesItem = NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdatesClicked), keyEquivalent: "")
+        checkUpdatesItem.target = self
+        statusMenu.addItem(checkUpdatesItem)
 
         statusMenu.addItem(NSMenuItem.separator())
 
@@ -527,6 +885,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
+    private func checkForUpdates() async {
+        let versionInfo = await UpdateManager.shared.checkForUpdates()
+        updateUpdateMenuItem(versionInfo: versionInfo)
+    }
+
+    @MainActor
+    private func updateUpdateMenuItem(versionInfo: UpdateManager.VersionInfo?) {
+        if let info = versionInfo {
+            updateMenuItem.title = "Update Available (v\(info.version))"
+            updateMenuItem.isHidden = false
+
+            // Send notification about update
+            NotificationManager.shared.sendNotification(
+                title: "NorthBuilt Sync Update Available",
+                body: "Version \(info.version) is ready to install"
+            )
+        } else {
+            updateMenuItem.isHidden = true
+        }
+    }
+
+    @MainActor
     private func performSync() async {
         guard !isSyncing else { return }
 
@@ -537,17 +917,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         isSyncing = false
 
-        // Don't update last sync time if sync was skipped
         if !result.skipped {
             lastSyncTime = Date()
             Preferences.shared.lastSyncDate = lastSyncTime
             lastSyncSuccess = result.success
 
-            // Handle notifications
             if result.success {
                 Preferences.shared.consecutiveFailures = 0
-
-                // Only notify on first successful sync after launch
                 if isFirstSync {
                     NotificationManager.shared.sendNotification(
                         title: "NorthBuilt Sync",
@@ -556,8 +932,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             } else {
                 Preferences.shared.consecutiveFailures += 1
-
-                // Notify on failure (always)
                 NotificationManager.shared.sendNotification(
                     title: "NorthBuilt Sync Failed",
                     body: result.message,
@@ -607,8 +981,87 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func checkForUpdatesClicked() {
+        Task {
+            statusMenuItem.title = "Status: Checking for updates..."
+            let versionInfo = await UpdateManager.shared.checkForUpdates()
+
+            await MainActor.run {
+                updateUpdateMenuItem(versionInfo: versionInfo)
+
+                if versionInfo == nil {
+                    let alert = NSAlert()
+                    alert.messageText = "No Updates Available"
+                    alert.informativeText = "You're running the latest version (v\(AppVersion.current))."
+                    alert.alertStyle = .informational
+                    alert.runModal()
+                }
+
+                statusMenuItem.title = lastSyncSuccess ? "Status: Synced" : "Status: Ready"
+            }
+        }
+    }
+
+    @objc private func updateClicked() {
+        guard let versionInfo = UpdateManager.shared.latestVersion else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Update to v\(versionInfo.version)?"
+        alert.informativeText = """
+        \(versionInfo.releaseNotes)
+
+        The app will download the update, compile it, and restart automatically.
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Update Now")
+        alert.addButton(withTitle: "Later")
+        alert.addButton(withTitle: "Skip This Version")
+
+        let response = alert.runModal()
+
+        switch response {
+        case .alertFirstButtonReturn:
+            performUpdate()
+        case .alertThirdButtonReturn:
+            UpdateManager.shared.skipVersion(versionInfo.version)
+            updateMenuItem.isHidden = true
+        default:
+            break
+        }
+    }
+
+    private func performUpdate() {
+        guard !UpdateManager.shared.isUpdateInProgress else { return }
+
+        Task {
+            await MainActor.run {
+                statusMenuItem.title = "Status: Updating..."
+                updateMenuItem.title = "Updating..."
+                updateMenuItem.isEnabled = false
+            }
+
+            do {
+                try await UpdateManager.shared.performUpdate { progress in
+                    Task { @MainActor in
+                        self.statusMenuItem.title = "Status: \(progress)"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    statusMenuItem.title = "Status: Update failed"
+                    updateMenuItem.isEnabled = true
+
+                    let alert = NSAlert()
+                    alert.messageText = "Update Failed"
+                    alert.informativeText = error.localizedDescription
+                    alert.alertStyle = .warning
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
     @objc private func viewLogsClicked() {
-        // Show logs in Terminal using the log command
         let script = """
         tell application "Terminal"
             activate
@@ -661,13 +1114,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.messageText = "NorthBuilt Sync"
         alert.informativeText = """
-        Version 1.1
+        Version \(AppVersion.current) (build \(AppVersion.build))
 
         Syncs AWS configuration from 1Password.
 
         Features:
         - Hourly background sync
         - Network-aware (skips when offline)
+        - Automatic updates from source
         - Failure notifications
         - Launch at Login support
         """
@@ -682,7 +1136,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 // MARK: - Main
 
-// Global reference to prevent delegate from being deallocated
 private var appDelegate: AppDelegate!
 
 autoreleasepool {
