@@ -208,8 +208,17 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 5: Deploy config
+# Step 5: Deploy config (only if no unsubstituted placeholders remain)
 # -----------------------------------------------------------------------------
+
+if grep -q '__MFA_SERIAL:' "$HOME/.aws/config.tmp" 2>/dev/null; then
+    log_error "Config has unsubstituted MFA placeholders - keeping previous config"
+    log_info "This usually means 1Password is locked. Unlock it and run sync again."
+    rm -f "$HOME/.aws/config.tmp" "$HOME/.aws/config.tmp.bak"
+    log_info "Sync aborted"
+    log_info "=========================================="
+    exit 1
+fi
 
 mv "$HOME/.aws/config.tmp" "$HOME/.aws/config"
 rm -f "$HOME/.aws/config.tmp.bak"
