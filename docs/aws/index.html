@@ -133,9 +133,22 @@ CURRENT_STEP=0
 TOTAL_STEPS=8
 
 # Terminal dimensions for bottom-anchored progress bar
-# Fallback to defaults if tput fails (e.g., non-interactive context)
-TERM_LINES=$(tput lines 2>/dev/null || echo 24)
-TERM_COLS=$(tput cols 2>/dev/null || echo 80)
+# When running via 'curl | bash', stdin is the pipe from curl, not the terminal.
+# tput queries terminal dimensions via stdin, so it fails with piped input.
+# We use stty with /dev/tty which always refers to the controlling terminal.
+if [[ -t 0 ]]; then
+    # stdin is a terminal - normal execution, tput works
+    TERM_LINES=$(tput lines 2>/dev/null || echo 40)
+    TERM_COLS=$(tput cols 2>/dev/null || echo 80)
+elif [[ -e /dev/tty ]]; then
+    # stdin is piped (curl | bash), but /dev/tty exists - query it directly
+    TERM_LINES=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1 || echo 40)
+    TERM_COLS=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f2 || echo 80)
+else
+    # Fallback defaults (no terminal available)
+    TERM_LINES=40
+    TERM_COLS=80
+fi
 PROGRESS_LINE=$((TERM_LINES - 1))  # Last line of terminal
 
 # Setup scroll region (excludes bottom line for progress bar)
@@ -801,5 +814,13 @@ spin_system "Running initial sync..." sleep 3
 : ==========================================
 :   Setup Complete
 : ==========================================
+
+# Reset scroll region before showing completion banner
+# This ensures the banner displays in full terminal, not the restricted scroll region
+reset_scroll_region
+# Clear the progress bar line
+tput cup $PROGRESS_LINE 0 2>/dev/null || true
+printf '%*s' "$TERM_COLS" ""
+tput cup 0 0 2>/dev/null || true
 
 show_completion
