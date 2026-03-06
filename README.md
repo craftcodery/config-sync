@@ -1,6 +1,6 @@
-# NorthBuilt Config Sync
+# Config Sync
 
-Configuration sync tools for NorthBuilt employee workstations. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
+Configuration sync tools for employee workstations. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
 
 ![Demo](docs/aws/demo.gif)
 
