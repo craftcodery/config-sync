@@ -424,47 +424,51 @@ show_completion() {
             "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
             "  $(gum style --foreground "$HEX_GRAY" "Click NorthBuilt icon → Launch at Login")")
 
-        # Join header and info, wrap in box with neon green border
+        # Join header and info, wrap in box matching logo style
         local content
         content=$(gum join --vertical --align center "$header" "$info")
 
         gum style \
+            --background "$HEX_BG" \
             --border double \
-            --border-foreground "$HEX_GREEN" \
+            --border-foreground "$HEX_PURPLE" \
             --padding "1 3" \
-            --margin "0 1" \
             "$content"
     elif [[ "$USE_COLOR" == "true" ]]; then
-        echo -e "  ${ANSI_GREEN}╔═══════════════════════════════════════════════════════╗${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_GREEN}${ANSI_BOLD}✓ Setup Complete!${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  Look for the NorthBuilt icon in your menu bar."
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Test your AWS access:${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Use a client profile:${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls --profile donatefordough"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Enable Launch at Login:${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    Click NorthBuilt icon → Launch at Login"
-        echo -e "  ${ANSI_GREEN}╚═══════════════════════════════════════════════════════╝${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}╔═══════════════════════════════════════════════════════════════╗${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}  ${ANSI_GREEN}${ANSI_BOLD}✓ Setup Complete!${ANSI_RESET}                                          ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}  Look for the NorthBuilt icon in your menu bar.              ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}  ${ANSI_PINK}Test your AWS access:${ANSI_RESET}                                      ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}    aws s3 ls                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}  ${ANSI_PINK}Use a client profile:${ANSI_RESET}                                      ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}    aws s3 ls --profile donatefordough                        ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}  ${ANSI_PINK}Enable Launch at Login:${ANSI_RESET}                                    ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}    Click NorthBuilt icon → Launch at Login                   ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                               ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}╚═══════════════════════════════════════════════════════════════╝${ANSI_RESET}"
     else
         echo ""
-        echo "  ==========================================="
-        echo "  Setup Complete!"
-        echo ""
-        echo "  Look for the NorthBuilt icon in your menu bar."
-        echo ""
-        echo "  Test your AWS access:"
-        echo "    aws s3 ls"
-        echo ""
-        echo "  Use a client profile:"
-        echo "    aws s3 ls --profile donatefordough"
-        echo ""
-        echo "  Enable Launch at Login:"
-        echo "    Click NorthBuilt icon -> Launch at Login"
-        echo "  ==========================================="
+        echo "╔═══════════════════════════════════════════════════════════════╗"
+        echo "║                                                               ║"
+        echo "║  Setup Complete!                                              ║"
+        echo "║                                                               ║"
+        echo "║  Look for the NorthBuilt icon in your menu bar.              ║"
+        echo "║                                                               ║"
+        echo "║  Test your AWS access:                                        ║"
+        echo "║    aws s3 ls                                                  ║"
+        echo "║                                                               ║"
+        echo "║  Use a client profile:                                        ║"
+        echo "║    aws s3 ls --profile donatefordough                        ║"
+        echo "║                                                               ║"
+        echo "║  Enable Launch at Login:                                      ║"
+        echo "║    Click NorthBuilt icon -> Launch at Login                   ║"
+        echo "║                                                               ║"
+        echo "╚═══════════════════════════════════════════════════════════════╝"
     fi
     echo ""
 }
