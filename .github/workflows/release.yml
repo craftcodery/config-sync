@@ -9,7 +9,7 @@ on:
       - 'docs/aws/AppIcon.icns'
       - 'docs/aws/MenuBarIcon.png'
       - 'docs/aws/aws-config'
-      - 'docs/aws/index.html'
+      - 'docs/aws/index.html.template'
 
 jobs:
   release:

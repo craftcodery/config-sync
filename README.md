@@ -66,12 +66,16 @@ Each tool follows the same pattern:
 docs/                           # Served via GitHub Pages at config.northbuilt.com
 ├── index.html                  # Landing page
 ├── CNAME                       # Custom domain config
-├── config.json                 # Centralized branding configuration
+├── config.json                 # Centralized branding configuration (single source of truth)
 └── [tool]/                     # Each tool has its own directory
     ├── README.md               # Tool-specific documentation
-    ├── index.html              # Setup script (curl-able)
+    ├── index.html.template     # Setup script template (processed by GitHub Actions)
     ├── *.swift                 # Swift source files (compiled during setup)
     └── *.icns, *.png           # App and menu bar icons
+
+.github/workflows/
+├── deploy.yml                  # Processes templates and deploys to GitHub Pages
+└── release.yml                 # Auto-creates releases when source files change
 ```
 
 ## Security
@@ -101,7 +105,7 @@ See individual tool READMEs for administration guides:
 
 ## Using This Template for Your Organization
 
-This repository is designed to be easily adapted for other organizations. The setup script dynamically loads branding from `config.json` and substitutes values into the Swift source before compiling.
+This repository is designed to be easily adapted for other organizations. All branding is centralized in `config.json` — GitHub Actions automatically injects these values into setup scripts during deployment.
 
 ### Quick Start
 
@@ -116,7 +120,13 @@ This repository is designed to be easily adapted for other organizations. The se
        "appNameShort": "Config Sync",
        "bundleId": "com.yourcompany.config-sync",
        "domain": "config.yourcompany.com",
-       "localDir": ".yourcompany"
+       "localDir": ".yourcompany",
+       "tagline": "AWS Config Sync • Powered by 1Password",
+       "asciiLogo": [
+         "Line 1 of your ASCII art...",
+         "Line 2...",
+         "..."
+       ]
      },
      "github": {
        "owner": "your-github-org",
@@ -133,44 +143,49 @@ This repository is designed to be easily adapted for other organizations. The se
    config.yourcompany.com
    ```
 
-4. **Update `docs/aws/index.html`** — Change the bootstrap URL (line ~42):
-   ```bash
-   BASE_URL="https://config.yourcompany.com/aws"
-   ```
+4. **Update `docs/aws/aws-config`** — Replace with your AWS profiles and 1Password item references
 
-5. **Update `docs/aws/aws-config`** — Replace with your AWS profiles and 1Password item references
-
-6. **Configure GitHub Pages** — In repository Settings → Pages:
-   - Source: Deploy from branch `main`
-   - Folder: `/docs`
+5. **Configure GitHub Pages** — In repository Settings → Pages:
+   - Source: **GitHub Actions** (not "Deploy from branch")
    - Custom domain: `config.yourcompany.com`
 
-7. **Configure DNS** — Point your domain to GitHub Pages:
+6. **Configure DNS** — Point your domain to GitHub Pages:
    ```
    config.yourcompany.com  CNAME  your-github-org.github.io
    ```
 
+### How Template Processing Works
+
+GitHub Actions (`deploy.yml`) processes templates before deployment:
+
+1. Reads `config.json` for all branding values
+2. Replaces `{{PLACEHOLDER}}` tokens in `*.template` files
+3. Generates final `index.html` files
+4. Deploys to GitHub Pages
+
+This means you only need to edit `config.json` — the setup scripts are automatically branded for your organization.
+
 ### What Gets Auto-Configured
 
-The setup script automatically substitutes these values from `config.json`:
+These placeholders are replaced in both the setup scripts (at deploy time) and Swift source (at install time):
 
-| Placeholder in Swift | Replaced with |
-|---------------------|---------------|
-| `config.northbuilt.com` | Your domain |
-| `craftcodery/config-sync` | Your GitHub owner/repo |
-| `craftcodery.1password.com` | Your 1Password account |
-| `NorthBuilt Config Sync` | Your app name |
-| `com.northbuilt.config-sync` | Your bundle ID |
-| `.northbuilt` | Your local directory |
-| `NorthBuilt` | Your org name |
+| Placeholder | Source | Replaced with |
+|------------|--------|---------------|
+| `{{ORG_NAME}}` | `config.json` | Your organization name |
+| `{{DOMAIN}}` | `config.json` | Your domain |
+| `{{GITHUB_OWNER}}` | `config.json` | Your GitHub org |
+| `{{GITHUB_REPO}}` | `config.json` | Your repo name |
+| `{{ASCII_LOGO_LINE_XX}}` | `config.json` | Your ASCII art logo |
+| `{{TAGLINE}}` | `config.json` | Your tagline |
+
+Swift source files use NorthBuilt values as template markers, which are replaced with your config values during user installation via sed.
 
 ### Files to Customize
 
 | File | What to change |
 |------|----------------|
-| `docs/config.json` | All branding values (required) |
+| `docs/config.json` | All branding values including ASCII logo (required) |
 | `docs/CNAME` | Your custom domain (required) |
-| `docs/aws/index.html` | Bootstrap URL on line ~42 (required) |
 | `docs/aws/aws-config` | Your AWS profiles and 1Password items |
 | `docs/index.html` | Landing page title and description |
 | `docs/aws/README.md` | Documentation for your users |
@@ -179,13 +194,17 @@ The setup script automatically substitutes these values from `config.json`:
 | `docs/aws/AppIcon.icns` | Your app icon |
 | `docs/aws/MenuBarIcon.png` | Your menu bar icon |
 
-### Optional: Custom Logo
+### Creating Your ASCII Logo
 
-The ASCII art logo in `docs/aws/index.html` shows "NORTHBUILT". Generate your own ASCII art at [patorjk.com/software/taag](https://patorjk.com/software/taag/) using the "ANSI Shadow" font, then replace the logo in `show_logo()`.
+1. Go to [patorjk.com/software/taag](https://patorjk.com/software/taag/)
+2. Enter your organization name
+3. Select the "ANSI Shadow" font
+4. Copy each line into the `asciiLogo` array in `config.json`
+5. The logo should be 12 lines (pad with empty strings if needed)
 
 ### Architecture Notes
 
-- **No server-side processing** — Everything runs via GitHub Pages (static hosting)
+- **Template processing** — GitHub Actions injects branding before deployment
 - **Compile from source** — Swift files are downloaded and compiled on each user's machine
 - **GitHub Releases** — Auto-updates fetch new versions from GitHub Releases API
 - **1Password integration** — Credentials are never stored; fetched on-demand via `op` CLI

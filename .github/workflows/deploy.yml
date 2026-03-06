@@ -1,0 +1,125 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Process templates
+        run: |
+          # Read config.json
+          CONFIG=$(cat docs/config.json)
+
+          # Extract branding values
+          ORG_NAME=$(echo "$CONFIG" | jq -r '.branding.orgName')
+          APP_NAME=$(echo "$CONFIG" | jq -r '.branding.appName')
+          APP_NAME_SHORT=$(echo "$CONFIG" | jq -r '.branding.appNameShort')
+          BUNDLE_ID=$(echo "$CONFIG" | jq -r '.branding.bundleId')
+          DOMAIN=$(echo "$CONFIG" | jq -r '.branding.domain')
+          LOCAL_DIR=$(echo "$CONFIG" | jq -r '.branding.localDir')
+          TAGLINE=$(echo "$CONFIG" | jq -r '.branding.tagline')
+
+          # Extract GitHub values
+          GITHUB_OWNER=$(echo "$CONFIG" | jq -r '.github.owner')
+          GITHUB_REPO=$(echo "$CONFIG" | jq -r '.github.repo')
+
+          # Extract ASCII logo lines (array to individual lines)
+          LOGO_LINE_01=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[0] // empty')
+          LOGO_LINE_02=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[1] // empty')
+          LOGO_LINE_03=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[2] // empty')
+          LOGO_LINE_04=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[3] // empty')
+          LOGO_LINE_05=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[4] // empty')
+          LOGO_LINE_06=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[5] // empty')
+          LOGO_LINE_07=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[6] // empty')
+          LOGO_LINE_08=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[7] // empty')
+          LOGO_LINE_09=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[8] // empty')
+          LOGO_LINE_10=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[9] // empty')
+          LOGO_LINE_11=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[10] // empty')
+          LOGO_LINE_12=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[11] // empty')
+
+          echo "Processing templates with:"
+          echo "  ORG_NAME: $ORG_NAME"
+          echo "  DOMAIN: $DOMAIN"
+          echo "  GITHUB_OWNER: $GITHUB_OWNER"
+          echo "  GITHUB_REPO: $GITHUB_REPO"
+
+          # Process AWS index.html.template
+          if [[ -f docs/aws/index.html.template ]]; then
+            cp docs/aws/index.html.template docs/aws/index.html
+
+            # Replace placeholders (use | as delimiter to avoid issues with URLs)
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/index.html
+            sed -i "s|{{APP_NAME}}|$APP_NAME|g" docs/aws/index.html
+            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/index.html
+            sed -i "s|{{BUNDLE_ID}}|$BUNDLE_ID|g" docs/aws/index.html
+            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/aws/index.html
+            sed -i "s|{{LOCAL_DIR}}|$LOCAL_DIR|g" docs/aws/index.html
+            sed -i "s|{{TAGLINE}}|$TAGLINE|g" docs/aws/index.html
+            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/aws/index.html
+            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/aws/index.html
+
+            # Replace ASCII logo lines
+            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" docs/aws/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" docs/aws/index.html
+
+            echo "Processed docs/aws/index.html"
+          fi
+
+          # Process SSH index.html.template (if exists)
+          if [[ -f docs/ssh/index.html.template ]]; then
+            cp docs/ssh/index.html.template docs/ssh/index.html
+
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/ssh/index.html
+            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/ssh/index.html
+            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/ssh/index.html
+            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/ssh/index.html
+
+            echo "Processed docs/ssh/index.html"
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

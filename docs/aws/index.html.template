@@ -7,13 +7,13 @@
 ## <style>body { background-color: #1a1a2e; color: #f0e6ff; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; } .token.comment { color: #6c6783; } .token.keyword { color: #b967ff; } .token.string { color: #05ffa1; } .token.function { color: #ff71ce; } .token.variable { color: #01cdfe; }</style>
 
 : ==========================================
-:   NorthBuilt AWS Config Sync
+:   {{ORG_NAME}} AWS Config Sync
 : ==========================================
 
-# This script configures AWS CLI on your MacBook for NorthBuilt development.
+# This script configures AWS CLI on your MacBook for {{ORG_NAME}} development.
 # Run it with:
 #
-:   curl -fsSL config.northbuilt.com/aws | bash
+:   curl -fsSL {{DOMAIN}}/aws | bash
 #
 # Prerequisites:
 #   - 1Password desktop app installed
@@ -28,7 +28,7 @@
 #   - Menu bar app for sync status and manual sync
 #
 # Source code:
-#   https://github.com/craftcodery/config-sync
+#   https://github.com/{{GITHUB_OWNER}}/{{GITHUB_REPO}}
 #
 
 : ==========================================
@@ -39,7 +39,7 @@ set -euo pipefail
 
 # Bootstrap URL - the only hardcoded value needed to start
 # Everything else is derived from config.json
-BASE_URL="https://config.northbuilt.com/aws"
+BASE_URL="https://{{DOMAIN}}/aws"
 
 # These will be populated from config.json after jq is installed
 ORG_NAME=""
@@ -175,52 +175,52 @@ show_logo() {
             --padding "1 3" \
             --width 50 \
             --bold \
-            "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
-            "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║" \
-            "██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║" \
-            "██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║" \
-            "██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║" \
-            "╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝" \
-            "██████╗ ██╗   ██╗██╗██╗  ████████╗          " \
-            "██╔══██╗██║   ██║██║██║  ╚══██╔══╝          " \
-            "██████╔╝██║   ██║██║██║     ██║             " \
-            "██╔══██╗██║   ██║██║██║     ██║             " \
-            "██████╔╝╚██████╔╝██║███████╗██║             " \
-            "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             ")
+            "{{ASCII_LOGO_LINE_01}}" \
+            "{{ASCII_LOGO_LINE_02}}" \
+            "{{ASCII_LOGO_LINE_03}}" \
+            "{{ASCII_LOGO_LINE_04}}" \
+            "{{ASCII_LOGO_LINE_05}}" \
+            "{{ASCII_LOGO_LINE_06}}" \
+            "{{ASCII_LOGO_LINE_07}}" \
+            "{{ASCII_LOGO_LINE_08}}" \
+            "{{ASCII_LOGO_LINE_09}}" \
+            "{{ASCII_LOGO_LINE_10}}" \
+            "{{ASCII_LOGO_LINE_11}}" \
+            "{{ASCII_LOGO_LINE_12}}")
 
         local tagline
         tagline=$(gum style \
             --foreground "$HEX_CYAN" \
             --italic \
             --padding "0 2" \
-            "AWS Config Sync • Powered by 1Password")
+            "{{TAGLINE}}")
 
         gum join --vertical --align center "$logo" "$tagline"
     elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "${ANSI_PINK}${ANSI_BOLD}"
         echo "  ╔══════════════════════════════════════════════════╗"
-        echo "  ║  ███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗    ║"
-        echo "  ║  ████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║    ║"
-        echo "  ║  ██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║    ║"
-        echo "  ║  ██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║    ║"
-        echo "  ║  ██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║    ║"
-        echo "  ║  ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝    ║"
-        echo "  ║  ██████╗ ██╗   ██╗██╗██╗  ████████╗              ║"
-        echo "  ║  ██╔══██╗██║   ██║██║██║  ╚══██╔══╝              ║"
-        echo "  ║  ██████╔╝██║   ██║██║██║     ██║                 ║"
-        echo "  ║  ██╔══██╗██║   ██║██║██║     ██║                 ║"
-        echo "  ║  ██████╔╝╚██████╔╝██║███████╗██║                 ║"
-        echo "  ║  ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝                 ║"
+        echo "  ║  {{ASCII_LOGO_LINE_01}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_02}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_03}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_04}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_05}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_06}}    ║"
+        echo "  ║  {{ASCII_LOGO_LINE_07}}              ║"
+        echo "  ║  {{ASCII_LOGO_LINE_08}}              ║"
+        echo "  ║  {{ASCII_LOGO_LINE_09}}                 ║"
+        echo "  ║  {{ASCII_LOGO_LINE_10}}                 ║"
+        echo "  ║  {{ASCII_LOGO_LINE_11}}                 ║"
+        echo "  ║  {{ASCII_LOGO_LINE_12}}                 ║"
         echo "  ╚══════════════════════════════════════════════════╝"
         echo -e "${ANSI_RESET}"
-        echo -e "    ${ANSI_CYAN}${ANSI_ITALIC}AWS Config Sync • Powered by 1Password${ANSI_RESET}"
+        echo -e "    ${ANSI_CYAN}${ANSI_ITALIC}{{TAGLINE}}${ANSI_RESET}"
     else
         # NO_COLOR mode - plain text only
         echo "  ╔══════════════════════════════════════════════════╗"
-        echo "  ║  NORTHBUILT                                      ║"
+        echo "  ║  {{ORG_NAME}}                                      ║"
         echo "  ║  AWS Config Sync                                 ║"
         echo "  ╚══════════════════════════════════════════════════╝"
-        echo "    AWS Config Sync - Powered by 1Password"
+        echo "    {{TAGLINE}}"
     fi
     echo ""
 }
@@ -417,7 +417,7 @@ show_error_box() {
 # Note: This function uses ORG_NAME which is loaded from config.json
 show_completion() {
     # Use ORG_NAME if loaded, otherwise fallback
-    local org="${ORG_NAME:-NorthBuilt}"
+    local org="${ORG_NAME:-{{ORG_NAME}}}"
 
     echo ""
     if has_gum && [[ "$USE_COLOR" == "true" ]]; then
