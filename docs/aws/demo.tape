@@ -12,8 +12,8 @@ Set FontSize 13
 Set LineHeight 1.3
 
 # Dimensions - wide enough to prevent text wrapping
-Set Width 820
-Set Height 440
+Set Width 850
+Set Height 480
 Set Padding 20
 
 # Window styling (commented out - available if needed)
@@ -40,7 +40,7 @@ Type "export PS1='$ ' && clear"
 Enter
 Show
 
-Sleep 400ms
+Sleep 100ms
 
 # Type the install command (purely visual - never actually executed)
 Type "curl -fsSL https://setup.northbuilt.com/aws | bash"
@@ -57,4 +57,4 @@ Sleep 500ms
 Show
 
 # Wait for the mock script to complete
-Sleep 20s
+Sleep 15s

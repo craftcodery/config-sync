@@ -77,7 +77,7 @@ logo=$(gum style \
     --background "$HEX_BG" \
     --border double \
     --border-foreground "$HEX_PURPLE" \
-    --padding "1 3" \
+    --padding "0 2" \
     --bold \
     "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
     "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║" \
@@ -96,13 +96,13 @@ tagline=$(gum style \
     --foreground "$HEX_CYAN" \
     --italic \
     --padding "0 2" \
-    "AWS Config Sync • Powered by 1Password")
+    "NorthBuilt Config Sync")
 
 echo ""
 gum join --vertical --align center "$logo" "$tagline"
 echo ""
 
-sleep 0.3
+sleep 0.8
 
 # Helper functions
 show_step() {
@@ -201,7 +201,7 @@ header=$(gum style \
 
 info=$(gum style \
     --foreground "$HEX_WHITE" \
-    --padding "1 0" \
+    --padding "0 0" \
     "Look for the NorthBuilt icon in your menu bar." \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Test your AWS access:")" \
@@ -228,4 +228,4 @@ gum style \
 echo ""
 
 # Hold on final screen so viewers can read
-sleep 4
+sleep 2
