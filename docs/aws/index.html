@@ -136,20 +136,26 @@ TOTAL_STEPS=8
 # When running via 'curl | bash', stdin is the pipe from curl, not the terminal.
 # tput queries terminal dimensions via stdin, so it fails with piped input.
 # We use stty with /dev/tty which always refers to the controlling terminal.
-if [[ -t 0 ]]; then
-    # stdin is a terminal - normal execution, tput works
-    TERM_LINES=$(tput lines 2>/dev/null || echo 40)
-    TERM_COLS=$(tput cols 2>/dev/null || echo 80)
-elif [[ -e /dev/tty ]]; then
-    # stdin is piped (curl | bash), but /dev/tty exists - query it directly
-    TERM_LINES=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1 || echo 40)
-    TERM_COLS=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f2 || echo 80)
-else
-    # Fallback defaults (no terminal available)
-    TERM_LINES=40
-    TERM_COLS=80
-fi
-PROGRESS_LINE=$((TERM_LINES - 1))  # Last line of terminal
+TERM_LINES=40
+TERM_COLS=80
+PROGRESS_LINE=39
+
+# Get current terminal dimensions
+get_term_size() {
+    if [[ -t 0 ]]; then
+        # stdin is a terminal - normal execution, tput works
+        TERM_LINES=$(tput lines 2>/dev/null || echo 40)
+        TERM_COLS=$(tput cols 2>/dev/null || echo 80)
+    elif [[ -e /dev/tty ]]; then
+        # stdin is piped (curl | bash), but /dev/tty exists - query it directly
+        TERM_LINES=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f1 || echo 40)
+        TERM_COLS=$(stty size < /dev/tty 2>/dev/null | cut -d' ' -f2 || echo 80)
+    fi
+    PROGRESS_LINE=$((TERM_LINES - 1))
+}
+
+# Initialize dimensions
+get_term_size
 
 # Setup scroll region (excludes bottom line for progress bar)
 setup_scroll_region() {
@@ -192,6 +198,15 @@ update_progress() {
 
     tput rc 2>/dev/null || true
 }
+
+# Handle terminal resize (SIGWINCH)
+handle_resize() {
+    get_term_size
+    reset_scroll_region
+    setup_scroll_region
+    update_progress
+}
+trap handle_resize WINCH
 
 # Initialize display with scroll region and bottom progress bar
 init_display() {
