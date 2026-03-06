@@ -157,16 +157,6 @@ get_term_size() {
 # Initialize dimensions
 get_term_size
 
-# Setup scroll region (excludes bottom line for progress bar)
-setup_scroll_region() {
-    # Set scroll region from line 0 to TERM_LINES-2 (leaving last line for progress)
-    printf '\033[0;%dr' $((TERM_LINES - 1))
-}
-
-# Reset scroll region to full terminal
-reset_scroll_region() {
-    printf '\033[r'
-}
 
 # Draw progress bar at fixed bottom position (no flicker - direct overwrite)
 update_progress() {
@@ -199,29 +189,20 @@ update_progress() {
 
 # Handle terminal resize (SIGWINCH)
 handle_resize() {
-    # Save cursor position, recalculate dimensions, restore cursor
-    tput sc 2>/dev/null || true
+    # Recalculate dimensions and redraw progress bar at new position
     get_term_size
-    reset_scroll_region
-    setup_scroll_region
     update_progress
-    tput rc 2>/dev/null || true
 }
 trap handle_resize WINCH
 
 # Initialize display with bottom progress bar
 init_display() {
-    # Don't clear screen - output starts immediately below the command
-    # Just set up scroll region and draw progress bar
-    setup_scroll_region
+    # Don't clear screen or set scroll region - output flows normally below command
+    # Just draw the initial progress bar at the bottom
     update_progress
 }
 
-# Cleanup scroll region on exit
-cleanup_display() {
-    reset_scroll_region
-}
-trap cleanup_display EXIT
+# No cleanup needed - we don't use scroll regions anymore
 
 # ------------------------------------------
 #   Display Functions (with gum fallback)
@@ -832,12 +813,10 @@ spin_system "Running initial sync..." sleep 3
 :   Setup Complete
 : ==========================================
 
-# Reset scroll region before showing completion banner
-# This ensures the banner displays in full terminal, not the restricted scroll region
-reset_scroll_region
-# Clear the progress bar line
+# Clear the progress bar line before showing completion
+tput sc 2>/dev/null || true
 tput cup $PROGRESS_LINE 0 2>/dev/null || true
 printf '%*s' "$TERM_COLS" ""
-tput cup 0 0 2>/dev/null || true
+tput rc 2>/dev/null || true
 
 show_completion
