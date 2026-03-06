@@ -161,8 +161,6 @@ get_term_size
 setup_scroll_region() {
     # Set scroll region from line 0 to TERM_LINES-2 (leaving last line for progress)
     printf '\033[0;%dr' $((TERM_LINES - 1))
-    # Move cursor to top of scroll region
-    tput cup 0 0 2>/dev/null || true
 }
 
 # Reset scroll region to full terminal
@@ -201,17 +199,24 @@ update_progress() {
 
 # Handle terminal resize (SIGWINCH)
 handle_resize() {
+    # Save cursor position, recalculate dimensions, restore cursor
+    tput sc 2>/dev/null || true
     get_term_size
     reset_scroll_region
     setup_scroll_region
     update_progress
+    tput rc 2>/dev/null || true
 }
 trap handle_resize WINCH
 
 # Initialize display with scroll region and bottom progress bar
 init_display() {
-    clear
+    # Clear screen and move to home position using ANSI escape sequences
+    # (avoids issues with 'clear' command when stdin is piped)
+    printf '\033[2J\033[H'
     setup_scroll_region
+    # Position cursor at top of scroll region for initial content
+    printf '\033[H'
     update_progress
 }
 
