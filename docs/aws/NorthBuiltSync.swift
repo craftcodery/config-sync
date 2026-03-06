@@ -11,8 +11,8 @@ private let logger = Logger(subsystem: "com.northbuilt.sync", category: "sync")
 // MARK: - Version
 
 private enum AppVersion {
-    static let current = "1.2.0"
-    static let build = 3
+    static let current = "1.3.0"
+    static let build = 5
 }
 
 // MARK: - Configuration
@@ -22,9 +22,41 @@ private enum Config {
     static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".northbuilt/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
-    static let defaultSyncInterval: TimeInterval = 3600 // 1 hour
+    static let syncHour = 8 // 8:00 AM
+    static let syncMinute = 0
+    static let syncTimeZone = TimeZone(identifier: "America/Chicago")! // Central Time
     static let updateCheckInterval: TimeInterval = 21600 // 6 hours
     static let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "craftcodery.1password.com"
+
+    /// Calculate seconds until next scheduled sync time (8am Central)
+    static func secondsUntilNextSync() -> TimeInterval {
+        let now = Date()
+        var calendar = Calendar.current
+        calendar.timeZone = syncTimeZone
+
+        // Create date components for today at sync time
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = syncHour
+        components.minute = syncMinute
+        components.second = 0
+
+        guard let todaySyncTime = calendar.date(from: components) else {
+            // Fallback to 24 hours if calculation fails
+            return 86400
+        }
+
+        // If we're past today's sync time, schedule for tomorrow
+        let targetDate: Date
+        if now >= todaySyncTime {
+            targetDate = calendar.date(byAdding: .day, value: 1, to: todaySyncTime) ?? todaySyncTime.addingTimeInterval(86400)
+        } else {
+            targetDate = todaySyncTime
+        }
+
+        let interval = targetDate.timeIntervalSince(now)
+        logger.notice("Next sync scheduled in \(Int(interval / 3600)) hours \(Int((interval.truncatingRemainder(dividingBy: 3600)) / 60)) minutes")
+        return max(interval, 60) // Minimum 1 minute to prevent rapid firing
+    }
 }
 
 // MARK: - Preferences
@@ -36,7 +68,6 @@ class Preferences {
 
     private enum Keys {
         static let notificationsEnabled = "notificationsEnabled"
-        static let syncInterval = "syncInterval"
         static let lastSyncDate = "lastSyncDate"
         static let consecutiveFailures = "consecutiveFailures"
         static let lastUpdateCheck = "lastUpdateCheck"
@@ -46,14 +77,6 @@ class Preferences {
     var notificationsEnabled: Bool {
         get { defaults.object(forKey: Keys.notificationsEnabled) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Keys.notificationsEnabled) }
-    }
-
-    var syncInterval: TimeInterval {
-        get {
-            let interval = defaults.double(forKey: Keys.syncInterval)
-            return interval > 0 ? interval : Config.defaultSyncInterval
-        }
-        set { defaults.set(newValue, forKey: Keys.syncInterval) }
     }
 
     var lastSyncDate: Date? {
@@ -739,6 +762,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusMenu: NSMenu!
     private var statusMenuItem: NSMenuItem!
     private var lastSyncMenuItem: NSMenuItem!
+    private var nextSyncMenuItem: NSMenuItem!
     private var updateMenuItem: NSMenuItem!
     private var launchAtLoginMenuItem: NSMenuItem!
     private var notificationsMenuItem: NSMenuItem!
@@ -776,9 +800,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func scheduleSyncTimer() {
         syncTimer?.invalidate()
-        syncTimer = Timer.scheduledTimer(withTimeInterval: Preferences.shared.syncInterval, repeats: true) { [weak self] _ in
+        let interval = Config.secondsUntilNextSync()
+        // Use non-repeating timer, reschedule after each sync
+        syncTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             Task {
                 await self?.performSync()
+                // Reschedule for next day after sync completes
+                await MainActor.run {
+                    self?.scheduleSyncTimer()
+                }
             }
         }
     }
@@ -820,6 +850,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(lastSyncMenuItem)
         updateLastSyncTime()
 
+        // Next sync time
+        nextSyncMenuItem = NSMenuItem(title: "Next sync: Calculating...", action: nil, keyEquivalent: "")
+        nextSyncMenuItem.isEnabled = false
+        statusMenu.addItem(nextSyncMenuItem)
+        updateNextSyncTime()
+
         // Update available (hidden by default)
         updateMenuItem = NSMenuItem(title: "Update Available", action: #selector(updateClicked), keyEquivalent: "u")
         updateMenuItem.keyEquivalentModifierMask = .command
@@ -848,8 +884,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         viewLogsItem.target = self
         statusMenu.addItem(viewLogsItem)
 
-        // Open AWS Config
-        let openConfigItem = NSMenuItem(title: "Open AWS Config", action: #selector(openConfigClicked), keyEquivalent: "o")
+        // View AWS Config
+        let openConfigItem = NSMenuItem(title: "View AWS config...", action: #selector(openConfigClicked), keyEquivalent: "o")
         openConfigItem.keyEquivalentModifierMask = .command
         openConfigItem.target = self
         statusMenu.addItem(openConfigItem)
@@ -943,6 +979,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         updateLastSyncTime()
+        updateNextSyncTime()
 
         if result.skipped {
             statusMenuItem.title = "Status: \(result.message)"
@@ -959,10 +996,58 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        let relativeTime = formatter.localizedString(for: lastSync, relativeTo: Date())
-        lastSyncMenuItem.title = "Last sync: \(relativeTime)"
+        let elapsed = Date().timeIntervalSince(lastSync)
+        if elapsed < 60 {
+            lastSyncMenuItem.title = "Last sync: Just now"
+        } else {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            let relativeTime = formatter.localizedString(for: lastSync, relativeTo: Date())
+            lastSyncMenuItem.title = "Last sync: \(relativeTime)"
+        }
+    }
+
+    private func updateNextSyncTime() {
+        var calendar = Calendar.current
+        calendar.timeZone = Config.syncTimeZone
+
+        let now = Date()
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = Config.syncHour
+        components.minute = Config.syncMinute
+        components.second = 0
+
+        guard let todaySyncTime = calendar.date(from: components) else {
+            nextSyncMenuItem.title = "Next sync: 8:00 AM Central"
+            return
+        }
+
+        let targetDate: Date
+        if now >= todaySyncTime {
+            targetDate = calendar.date(byAdding: .day, value: 1, to: todaySyncTime) ?? todaySyncTime
+        } else {
+            targetDate = todaySyncTime
+        }
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeStyle = .short
+        timeFormatter.timeZone = Config.syncTimeZone
+
+        let isToday = calendar.isDateInToday(targetDate)
+        let isTomorrow = calendar.isDateInTomorrow(targetDate)
+
+        let timeString = timeFormatter.string(from: targetDate)
+        if isToday {
+            nextSyncMenuItem.title = "Next sync: Today \(timeString)"
+        } else if isTomorrow {
+            nextSyncMenuItem.title = "Next sync: Tomorrow \(timeString)"
+        } else {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEEE"
+            dayFormatter.timeZone = Config.syncTimeZone
+            let dayString = dayFormatter.string(from: targetDate)
+            nextSyncMenuItem.title = "Next sync: \(dayString) \(timeString)"
+        }
     }
 
     private func updateLaunchAtLoginState() {
@@ -1119,7 +1204,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Syncs AWS configuration from 1Password.
 
         Features:
-        - Hourly background sync
+        - Daily sync at 8:00 AM Central
         - Network-aware (skips when offline)
         - Automatic updates from source
         - Failure notifications

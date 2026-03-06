@@ -133,8 +133,9 @@ CURRENT_STEP=0
 TOTAL_STEPS=8
 
 # Terminal dimensions for bottom-anchored progress bar
-TERM_LINES=$(tput lines)
-TERM_COLS=$(tput cols)
+# Fallback to defaults if tput fails (e.g., non-interactive context)
+TERM_LINES=$(tput lines 2>/dev/null || echo 24)
+TERM_COLS=$(tput cols 2>/dev/null || echo 80)
 PROGRESS_LINE=$((TERM_LINES - 1))  # Last line of terminal
 
 # Setup scroll region (excludes bottom line for progress bar)
@@ -142,7 +143,7 @@ setup_scroll_region() {
     # Set scroll region from line 0 to TERM_LINES-2 (leaving last line for progress)
     printf '\033[0;%dr' $((TERM_LINES - 1))
     # Move cursor to top of scroll region
-    tput cup 0 0
+    tput cup 0 0 2>/dev/null || true
 }
 
 # Reset scroll region to full terminal
@@ -161,8 +162,9 @@ update_progress() {
     for ((i=0; i<empty; i++)); do bar+="░"; done
 
     # Save cursor, move to bottom line, draw, restore cursor
-    tput sc
-    tput cup $PROGRESS_LINE 0
+    # Use || true to prevent failures in non-interactive contexts
+    tput sc 2>/dev/null || true
+    tput cup $PROGRESS_LINE 0 2>/dev/null || true
 
     # Build the entire line and print at once (reduces flicker)
     local status_text
@@ -175,7 +177,7 @@ update_progress() {
         printf '%s%*s' "$status_text" $((TERM_COLS - ${#status_text})) ""
     fi
 
-    tput rc
+    tput rc 2>/dev/null || true
 }
 
 # Initialize display with scroll region and bottom progress bar
@@ -484,7 +486,7 @@ show_completion() {
             "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile donatefordough")" \
             "" \
             "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
-            "  $(gum style --foreground "$HEX_GRAY" "Automatic every hour, or click icon to sync now")" \
+            "  $(gum style --foreground "$HEX_GRAY" "Daily at 8:00 AM Central, or click icon to sync now")" \
             "" \
             "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
             "  $(gum style --foreground "$HEX_GRAY" "Click NorthBuilt icon → Launch at Login")")
@@ -731,9 +733,9 @@ cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
     <key>CFBundleDisplayName</key>
     <string>NorthBuilt Sync</string>
     <key>CFBundleVersion</key>
-    <string>3</string>
+    <string>5</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.2.0</string>
+    <string>1.3.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconFile</key>

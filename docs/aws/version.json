@@ -1,9 +1,9 @@
 {
-  "version": "1.2.0",
-  "build": 3,
+  "version": "1.3.0",
+  "build": 5,
   "minimumOS": "12.0",
   "releaseDate": "2026-03-05",
-  "releaseNotes": "Added self-updating capability and quality of life improvements.",
+  "releaseNotes": "Daily sync at 8:00 AM Central. Added next sync time display. Fixed last sync time formatting.",
   "files": {
     "app": "NorthBuiltSync.swift",
     "helper": "aws-vault-1password.swift",

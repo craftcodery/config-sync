@@ -89,7 +89,7 @@ After setup, the NorthBuilt icon appears in your menu bar:
 
 | Feature | Description |
 |---------|-------------|
-| **Hourly Sync** | AWS config syncs automatically every hour |
+| **Daily Sync** | AWS config syncs daily at 8:00 AM Central |
 | **Automatic Updates** | App checks for updates every 6 hours |
 | **Self-Updating** | Updates download source, compile locally, restart automatically |
 | **Network-Aware** | Skips sync when offline, resumes when connected |
@@ -125,7 +125,7 @@ curl -fsSL https://setup.northbuilt.com/aws | bash
 6. Creates app bundle with icons
 7. Launches app and runs initial sync
 
-### Hourly Sync Process
+### Daily Sync Process
 
 1. Check network connectivity (skip if offline)
 2. Download `aws-config` template from GitHub Pages
@@ -191,7 +191,7 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 │       └── Info.plist
 └── aws-vault-1password         # Compiled credential helper
 
-~/.aws/config                   # Deployed AWS config (synced hourly)
+~/.aws/config                   # Deployed AWS config (synced daily)
 ```
 
 ## For Administrators
@@ -213,7 +213,7 @@ setup.northbuilt.com/aws/ (GitHub Pages)
    region = us-east-1
    ```
 
-3. **Commit and push** — employees receive the config update within an hour
+3. **Commit and push** — employees receive the config update within a day
 
 ### Releasing App Updates
 

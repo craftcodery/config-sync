@@ -211,7 +211,7 @@ info=$(gum style \
     "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile donatefordough")" \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "Automatic every hour, or click icon to sync now")" \
+    "  $(gum style --foreground "$HEX_GRAY" "Daily at 8:00 AM Central, or click icon to sync now")" \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
     "  $(gum style --foreground "$HEX_GRAY" "Click NorthBuilt icon → Launch at Login")")
