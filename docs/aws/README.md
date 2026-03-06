@@ -156,10 +156,10 @@ AWS CLI uses credentials for API call
 
 ### Self-Update Process
 
-1. App checks `version.json` every 6 hours
+1. App checks GitHub Releases API every 6 hours
 2. If new version available, shows "Update Available" in menu
 3. User clicks update → confirmation dialog with release notes
-4. App downloads new Swift source files
+4. App downloads Swift source files from release assets
 5. Compiles locally with `swiftc -O`
 6. Backs up current binary
 7. Replaces binary, helper, and icons
@@ -168,18 +168,26 @@ AWS CLI uses credentials for API call
 ## Architecture
 
 ```
-setup.northbuilt.com/aws/ (GitHub Pages)
-├── index.html                  # Setup script (bash)
-├── version.json                # Version info for auto-updates
-├── aws-config                  # AWS config template with placeholders
-├── aws-vault-1password.swift   # Credential helper source (~340 lines)
-├── NorthBuiltSync.swift        # Menu bar app source (~1150 lines)
-├── AppIcon.icns                # App icon (Finder, Activity Monitor)
-├── MenuBarIcon.png             # Menu bar icon (18x18 @2x)
-├── 1password-standard.md       # 1Password entry documentation
-├── demo.gif                    # Animated demo for README
-├── demo.tape                   # VHS tape file (regenerate with: vhs demo.tape)
-└── readability.js              # Makes script pretty in browsers
+GitHub Repository
+├── .github/workflows/release.yml  # Auto-release on push
+└── docs/aws/                      # Source files (GitHub Pages)
+    ├── index.html                 # Setup script (bash)
+    ├── aws-config                 # AWS config template with placeholders
+    ├── aws-vault-1password.swift  # Credential helper source
+    ├── NorthBuiltSync.swift       # Menu bar app source
+    ├── AppIcon.icns               # App icon (Finder, Activity Monitor)
+    ├── MenuBarIcon.png            # Menu bar icon (18x18 @2x)
+    ├── 1password-standard.md      # 1Password entry documentation
+    ├── demo.gif                   # Animated demo for README
+    ├── demo.tape                  # VHS tape file (regenerate with: vhs demo.tape)
+    └── readability.js             # Makes script pretty in browsers
+
+GitHub Releases (auto-created on push)
+└── v1.3.1/                        # Release tag
+    ├── NorthBuiltSync.swift       # Attached assets for updates
+    ├── aws-vault-1password.swift
+    ├── AppIcon.icns
+    └── MenuBarIcon.png
 
 ~/.northbuilt/aws/ (on employee machines)
 ├── NorthBuiltSync.app/         # Menu bar app bundle
@@ -217,25 +225,37 @@ setup.northbuilt.com/aws/ (GitHub Pages)
 
 ### Releasing App Updates
 
-1. Make changes to `NorthBuiltSync.swift` or `aws-vault-1password.swift`
-2. Update `version.json`:
-   ```json
-   {
-     "version": "1.3.0",
-     "build": 4,
-     "releaseDate": "2026-03-06",
-     "releaseNotes": "Description of changes for users."
-   }
+Releases are automated via GitHub Actions. When you push changes to app files, a new release is created automatically.
+
+**Version bumping:**
+
+| Commit message | Version bump | Example |
+|----------------|--------------|---------|
+| Normal commit | Patch | 1.3.0 → 1.3.1 |
+| Contains `[minor]` | Minor | 1.3.1 → 1.4.0 |
+| Contains `[major]` | Major | 1.4.0 → 2.0.0 |
+
+**Workflow:**
+
+1. Make changes to `NorthBuiltSync.swift`, `aws-vault-1password.swift`, or other app files
+2. Commit with a descriptive message (this becomes the release notes)
+   ```bash
+   git commit -m "Fix sync timing issue"           # Patch bump (1.3.0 → 1.3.1)
+   git commit -m "[minor] Add new profile support" # Minor bump (1.3.1 → 1.4.0)
+   git commit -m "[major] Redesign menu bar UI"    # Major bump (1.4.0 → 2.0.0)
    ```
-3. Commit and push (requires 2+ approvals)
-4. Employees receive update notification within 6 hours
+3. Push to main
+4. GitHub Action automatically:
+   - Determines version bump from commit message
+   - Creates a new GitHub Release with the version tag
+   - Attaches source files as release assets
+5. Employees receive update notification within 6 hours
 
 ### Files Reference
 
 | File | Purpose |
 |------|---------|
 | `index.html` | Setup script (dual-purpose: webpage + bash) |
-| `version.json` | Version info for auto-updates |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password.swift` | Credential helper source |
 | `NorthBuiltSync.swift` | Menu bar app source |

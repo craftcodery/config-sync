@@ -19,6 +19,7 @@ private enum AppVersion {
 
 private enum Config {
     static let baseURL = "https://setup.northbuilt.com/aws"
+    static let githubReleasesURL = "https://api.github.com/repos/craftcodery/northbuilt-config-sync/releases/latest"
     static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".northbuilt/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
@@ -176,19 +177,66 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 class UpdateManager {
     static let shared = UpdateManager()
 
-    struct VersionInfo: Codable {
+    struct VersionInfo {
         let version: String
-        let build: Int
-        let minimumOS: String
         let releaseDate: String
         let releaseNotes: String
-        let files: Files
+        let assets: Assets
 
-        struct Files: Codable {
-            let app: String
-            let helper: String
-            let icon: String
-            let menuBarIcon: String
+        struct Assets {
+            let appURL: URL
+            let helperURL: URL
+            let iconURL: URL
+            let menuBarIconURL: URL
+        }
+
+        /// Parse from GitHub Releases API response
+        static func from(githubRelease data: Data) throws -> VersionInfo {
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tagName = json["tag_name"] as? String,
+                  let body = json["body"] as? String,
+                  let publishedAt = json["published_at"] as? String,
+                  let assetsArray = json["assets"] as? [[String: Any]] else {
+                throw UpdateError.parseError
+            }
+
+            // Strip 'v' prefix from tag
+            let version = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+
+            // Parse release date (just the date part)
+            let releaseDate = String(publishedAt.prefix(10))
+
+            // Find asset URLs by name
+            func findAssetURL(name: String) -> URL? {
+                for asset in assetsArray {
+                    if let assetName = asset["name"] as? String,
+                       assetName == name,
+                       let urlString = asset["browser_download_url"] as? String,
+                       let url = URL(string: urlString) {
+                        return url
+                    }
+                }
+                return nil
+            }
+
+            guard let appURL = findAssetURL(name: "NorthBuiltSync.swift"),
+                  let helperURL = findAssetURL(name: "aws-vault-1password.swift"),
+                  let iconURL = findAssetURL(name: "AppIcon.icns"),
+                  let menuBarIconURL = findAssetURL(name: "MenuBarIcon.png") else {
+                throw UpdateError.parseError
+            }
+
+            return VersionInfo(
+                version: version,
+                releaseDate: releaseDate,
+                releaseNotes: body,
+                assets: Assets(
+                    appURL: appURL,
+                    helperURL: helperURL,
+                    iconURL: iconURL,
+                    menuBarIconURL: menuBarIconURL
+                )
+            )
         }
     }
 
@@ -275,23 +323,22 @@ class UpdateManager {
     }
 
     private func fetchVersionInfo() async throws -> VersionInfo {
-        guard let url = URL(string: "\(Config.baseURL)/version.json") else {
+        guard let url = URL(string: Config.githubReleasesURL) else {
             throw UpdateError.networkError("Invalid URL")
         }
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("NorthBuiltSync/\(AppVersion.current)", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             throw UpdateError.networkError("HTTP error")
         }
 
-        let decoder = JSONDecoder()
-        guard let versionInfo = try? decoder.decode(VersionInfo.self, from: data) else {
-            throw UpdateError.parseError
-        }
-
-        return versionInfo
+        return try VersionInfo.from(githubRelease: data)
     }
 
     private func isNewerVersion(_ remoteVersion: String) -> Bool {
@@ -319,29 +366,25 @@ class UpdateManager {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
             logger.notice("Update temp directory: \(tempDir.path)")
 
-            // Download source files
+            // Download source files from GitHub Release assets
             status = .downloading
             progressHandler("Downloading update...")
 
-            let appSourceURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.app)")!
             let appSourcePath = tempDir.appendingPathComponent("NorthBuiltSync.swift")
-            try await downloadFile(from: appSourceURL, to: appSourcePath)
+            try await downloadFile(from: versionInfo.assets.appURL, to: appSourcePath)
             logger.notice("Downloaded app source")
 
             // Download helper source
-            let helperSourceURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.helper)")!
             let helperSourcePath = tempDir.appendingPathComponent("aws-vault-1password.swift")
-            try await downloadFile(from: helperSourceURL, to: helperSourcePath)
+            try await downloadFile(from: versionInfo.assets.helperURL, to: helperSourcePath)
             logger.notice("Downloaded helper source")
 
             // Download icons
-            let iconURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.icon)")!
             let iconPath = tempDir.appendingPathComponent("AppIcon.icns")
-            try await downloadFile(from: iconURL, to: iconPath)
+            try await downloadFile(from: versionInfo.assets.iconURL, to: iconPath)
 
-            let menuBarIconURL = URL(string: "\(Config.baseURL)/\(versionInfo.files.menuBarIcon)")!
             let menuBarIconPath = tempDir.appendingPathComponent("MenuBarIcon.png")
-            try await downloadFile(from: menuBarIconURL, to: menuBarIconPath)
+            try await downloadFile(from: versionInfo.assets.menuBarIconURL, to: menuBarIconPath)
             logger.notice("Downloaded icons")
 
             // Compile app
