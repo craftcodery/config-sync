@@ -37,8 +37,21 @@
 
 set -euo pipefail
 
+# Bootstrap URL - the only hardcoded value needed to start
+# Everything else is derived from config.json
 BASE_URL="https://config.northbuilt.com/aws"
-CONFIG_DIR="$HOME/.northbuilt/aws"
+
+# These will be populated from config.json after jq is installed
+ORG_NAME=""
+APP_NAME=""
+APP_NAME_SHORT=""
+BUNDLE_ID=""
+DOMAIN=""
+LOCAL_DIR=""
+GITHUB_OWNER=""
+GITHUB_REPO=""
+OP_ACCOUNT_VALUE=""
+CONFIG_DIR=""
 
 # ------------------------------------------
 #   80s Retro Synthwave Color Palette
@@ -395,7 +408,11 @@ show_error_box() {
 }
 
 # Display completion banner with summary
+# Note: This function uses ORG_NAME which is loaded from config.json
 show_completion() {
+    # Use ORG_NAME if loaded, otherwise fallback
+    local org="${ORG_NAME:-NorthBuilt}"
+
     echo ""
     if has_gum && [[ "$USE_COLOR" == "true" ]]; then
         # Inner content width (44 + 6 padding + 2 border = 52, matching logo)
@@ -418,13 +435,13 @@ show_completion() {
             --background "$HEX_BG" \
             --width $w \
             --padding "1 0" \
-            "  Look for the NorthBuilt icon in your menu bar." \
+            "  Look for the $org icon in your menu bar." \
             "" \
-            "$(gum style --foreground "$HEX_PINK" --background "$HEX_BG" --width $w --bold "  Use your NorthBuilt profile:")" \
+            "$(gum style --foreground "$HEX_PINK" --background "$HEX_BG" --width $w --bold "  Use your $org profile:")" \
             "$(gum style --foreground "$HEX_WHITE" --background "$HEX_BG" --width $w "    aws s3 ls")" \
             "" \
             "$(gum style --foreground "$HEX_PINK" --background "$HEX_BG" --width $w --bold "  Use a client profile:")" \
-            "$(gum style --foreground "$HEX_WHITE" --background "$HEX_BG" --width $w "    aws s3 ls --profile donatefordough")")
+            "$(gum style --foreground "$HEX_WHITE" --background "$HEX_BG" --width $w "    aws s3 ls --profile <client>")")
 
         # Join header and info, wrap in box matching logo style
         local content
@@ -441,13 +458,13 @@ show_completion() {
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}            ${ANSI_GREEN}${ANSI_BOLD}✓ Setup Complete!${ANSI_RESET}               ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
-        echo -e "${ANSI_PURPLE}║${ANSI_RESET}   Look for the NorthBuilt icon in your menu bar.${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}   Look for the $org icon in your menu bar.      ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
-        echo -e "${ANSI_PURPLE}║${ANSI_RESET}   ${ANSI_PINK}Use your NorthBuilt profile:${ANSI_RESET}                 ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}   ${ANSI_PINK}Use your $org profile:${ANSI_RESET}                       ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}     aws s3 ls                                    ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}   ${ANSI_PINK}Use a client profile:${ANSI_RESET}                        ${ANSI_PURPLE}║${ANSI_RESET}"
-        echo -e "${ANSI_PURPLE}║${ANSI_RESET}     aws s3 ls --profile donatefordough          ${ANSI_PURPLE}║${ANSI_RESET}"
+        echo -e "${ANSI_PURPLE}║${ANSI_RESET}     aws s3 ls --profile <client>                ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}║${ANSI_RESET}                                                  ${ANSI_PURPLE}║${ANSI_RESET}"
         echo -e "${ANSI_PURPLE}╚══════════════════════════════════════════════════╝${ANSI_RESET}"
     else
@@ -456,13 +473,13 @@ show_completion() {
         echo "║                                                  ║"
         echo "║            Setup Complete!                       ║"
         echo "║                                                  ║"
-        echo "║   Look for the NorthBuilt icon in your menu bar.║"
+        echo "║   Look for the $org icon in your menu bar.      ║"
         echo "║                                                  ║"
-        echo "║   Use your NorthBuilt profile:                   ║"
+        echo "║   Use your $org profile:                        ║"
         echo "║     aws s3 ls                                    ║"
         echo "║                                                  ║"
         echo "║   Use a client profile:                          ║"
-        echo "║     aws s3 ls --profile donatefordough          ║"
+        echo "║     aws s3 ls --profile <client>                ║"
         echo "║                                                  ║"
         echo "╚══════════════════════════════════════════════════╝"
     fi
@@ -538,6 +555,36 @@ show_success "AWS CLI ready"
 spin_install "Installing jq..." bash -c "brew install jq 2>/dev/null || true"
 show_success "jq ready"
 
+# ------------------------------------------
+#   Load configuration from config.json
+# ------------------------------------------
+# Now that jq is available, fetch and parse the central config file
+# This allows the entire setup to be customized by editing config.json
+
+CONFIG_JSON_URL="${BASE_URL%/*}/config.json"  # Strip /aws, add /config.json
+CONFIG_JSON=$(curl -fsSL "$CONFIG_JSON_URL")
+
+# Extract branding values
+ORG_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.orgName')
+APP_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.appName')
+APP_NAME_SHORT=$(echo "$CONFIG_JSON" | jq -r '.branding.appNameShort')
+APP_EXECUTABLE=$(echo "$APP_NAME_SHORT" | tr -d ' ')  # "Config Sync" → "ConfigSync"
+BUNDLE_ID=$(echo "$CONFIG_JSON" | jq -r '.branding.bundleId')
+DOMAIN=$(echo "$CONFIG_JSON" | jq -r '.branding.domain')
+LOCAL_DIR=$(echo "$CONFIG_JSON" | jq -r '.branding.localDir')
+
+# Extract GitHub values
+GITHUB_OWNER=$(echo "$CONFIG_JSON" | jq -r '.github.owner')
+GITHUB_REPO=$(echo "$CONFIG_JSON" | jq -r '.github.repo')
+
+# Extract 1Password values
+OP_ACCOUNT_VALUE=$(echo "$CONFIG_JSON" | jq -r '.onepassword.account')
+
+# Set CONFIG_DIR based on loaded config
+CONFIG_DIR="$HOME/.$LOCAL_DIR/aws"
+
+show_success "Configuration loaded"
+
 spin_install "Installing glow..." bash -c "brew install glow 2>/dev/null || true"
 show_success "glow ready"
 
@@ -587,19 +634,19 @@ fi
 
 if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
     echo '' >> "$SHELL_PROFILE"
-    echo '# 1Password account for AWS credential helper (NorthBuilt)' >> "$SHELL_PROFILE"
-    echo 'export OP_ACCOUNT="craftcodery.1password.com"' >> "$SHELL_PROFILE"
-    export OP_ACCOUNT="craftcodery.1password.com"
+    echo "# 1Password account for AWS credential helper ($ORG_NAME)" >> "$SHELL_PROFILE"
+    echo "export OP_ACCOUNT=\"$OP_ACCOUNT_VALUE\"" >> "$SHELL_PROFILE"
+    export OP_ACCOUNT="$OP_ACCOUNT_VALUE"
     show_success "OP_ACCOUNT configured"
 else
     show_success "OP_ACCOUNT already configured"
 fi
 
 # Ensure PATH includes config dir
-if ! grep -q ".northbuilt/aws" "$SHELL_PROFILE" 2>/dev/null; then
+if ! grep -q ".$LOCAL_DIR/aws" "$SHELL_PROFILE" 2>/dev/null; then
     echo '' >> "$SHELL_PROFILE"
-    echo '# NorthBuilt AWS tools' >> "$SHELL_PROFILE"
-    echo 'export PATH="$HOME/.northbuilt/aws:$PATH"' >> "$SHELL_PROFILE"
+    echo "# $ORG_NAME AWS tools" >> "$SHELL_PROFILE"
+    echo "export PATH=\"\$HOME/.$LOCAL_DIR/aws:\$PATH\"" >> "$SHELL_PROFILE"
     show_success "PATH updated"
 else
     show_success "PATH already configured"
@@ -618,6 +665,10 @@ mkdir -p "$HOME/.aws"
 spin_download "Downloading credential helper..." \
     curl -fsSL "$BASE_URL/aws-vault-1password.swift" -o "$CONFIG_DIR/aws-vault-1password.swift"
 
+# Substitute branding values in Swift source before compiling
+sed -i.bak "s|craftcodery.1password.com|$OP_ACCOUNT_VALUE|g" "$CONFIG_DIR/aws-vault-1password.swift"
+rm -f "$CONFIG_DIR/aws-vault-1password.swift.bak"
+
 spin_process "Compiling credential helper..." \
     swiftc -O -o "$CONFIG_DIR/aws-vault-1password" "$CONFIG_DIR/aws-vault-1password.swift"
 
@@ -626,8 +677,7 @@ chmod +x "$CONFIG_DIR/aws-vault-1password"
 show_success "Credential helper built"
 
 # Download and compile menu bar app
-APP_NAME="ConfigSync"
-APP_DIR="$CONFIG_DIR/$APP_NAME.app"
+APP_DIR="$CONFIG_DIR/$APP_EXECUTABLE.app"
 APP_CONTENTS="$APP_DIR/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
@@ -635,15 +685,26 @@ APP_RESOURCES="$APP_CONTENTS/Resources"
 spin_download "Downloading menu bar app..." \
     curl -fsSL "$BASE_URL/ConfigSync.swift" -o "$CONFIG_DIR/ConfigSync.swift"
 
+# Substitute branding values in Swift source before compiling
+# Order matters: replace longer/more specific strings first
+sed -i.bak "s|config.northbuilt.com|$DOMAIN|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|craftcodery/config-sync|$GITHUB_OWNER/$GITHUB_REPO|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|craftcodery.1password.com|$OP_ACCOUNT_VALUE|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|NorthBuilt Config Sync|$APP_NAME|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|com.northbuilt.config-sync|$BUNDLE_ID|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|\.northbuilt|.$LOCAL_DIR|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|NorthBuilt|$ORG_NAME|g" "$CONFIG_DIR/ConfigSync.swift"
+rm -f "$CONFIG_DIR/ConfigSync.swift.bak"
+
 spin_process "Compiling menu bar app..." \
-    swiftc -O -o "$CONFIG_DIR/ConfigSync" "$CONFIG_DIR/ConfigSync.swift"
+    swiftc -O -o "$CONFIG_DIR/$APP_EXECUTABLE" "$CONFIG_DIR/ConfigSync.swift"
 
 # Create .app bundle structure
 rm -rf "$APP_DIR"
 mkdir -p "$APP_MACOS"
 mkdir -p "$APP_RESOURCES"
 
-mv "$CONFIG_DIR/ConfigSync" "$APP_MACOS/$APP_NAME"
+mv "$CONFIG_DIR/$APP_EXECUTABLE" "$APP_MACOS/$APP_EXECUTABLE"
 rm -f "$CONFIG_DIR/ConfigSync.swift"
 
 # Download app icons
@@ -651,20 +712,20 @@ spin_download "Downloading icons..." \
     curl -fsSL "$BASE_URL/AppIcon.icns" -o "$APP_RESOURCES/AppIcon.icns"
 curl -fsSL "$BASE_URL/MenuBarIcon.png" -o "$APP_RESOURCES/MenuBarIcon.png" 2>/dev/null
 
-# Create Info.plist
-cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
+# Create Info.plist (using variables from config.json)
+cat > "$APP_CONTENTS/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>ConfigSync</string>
+    <string>$APP_EXECUTABLE</string>
     <key>CFBundleIdentifier</key>
-    <string>com.northbuilt.config-sync</string>
+    <string>$BUNDLE_ID</string>
     <key>CFBundleName</key>
-    <string>NorthBuilt Config Sync</string>
+    <string>$APP_NAME</string>
     <key>CFBundleDisplayName</key>
-    <string>NorthBuilt Config Sync</string>
+    <string>$APP_NAME</string>
     <key>CFBundleVersion</key>
     <string>5</string>
     <key>CFBundleShortVersionString</key>
@@ -721,6 +782,8 @@ show_success "Cleanup complete"
 show_step "Launching app"
 
 # Kill any existing instance
+pkill -f "$APP_EXECUTABLE.app" 2>/dev/null || true
+# Also kill legacy app names for migration
 pkill -f "ConfigSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltAWSSync.app" 2>/dev/null || true
