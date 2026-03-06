@@ -13,7 +13,7 @@
 # This script configures AWS CLI on your MacBook for NorthBuilt development.
 # Run it with:
 #
-:   curl -fsSL https://setup.northbuilt.com/aws | bash
+:   curl -fsSL https://config.northbuilt.com/aws | bash
 #
 # Prerequisites:
 #   - 1Password desktop app installed
@@ -28,7 +28,7 @@
 #   - Menu bar app for sync status and manual sync
 #
 # Source code:
-#   https://github.com/craftcodery/northbuilt-config-sync
+#   https://github.com/craftcodery/config-sync
 #
 
 : ==========================================
@@ -37,7 +37,7 @@
 
 set -euo pipefail
 
-BASE_URL="https://setup.northbuilt.com/aws"
+BASE_URL="https://config.northbuilt.com/aws"
 CONFIG_DIR="$HOME/.northbuilt/aws"
 
 # ------------------------------------------
@@ -626,25 +626,25 @@ chmod +x "$CONFIG_DIR/aws-vault-1password"
 show_success "Credential helper built"
 
 # Download and compile menu bar app
-APP_NAME="NorthBuiltSync"
+APP_NAME="ConfigSync"
 APP_DIR="$CONFIG_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_DIR/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 
 spin_download "Downloading menu bar app..." \
-    curl -fsSL "$BASE_URL/NorthBuiltSync.swift" -o "$CONFIG_DIR/NorthBuiltSync.swift"
+    curl -fsSL "$BASE_URL/ConfigSync.swift" -o "$CONFIG_DIR/ConfigSync.swift"
 
 spin_process "Compiling menu bar app..." \
-    swiftc -O -o "$CONFIG_DIR/NorthBuiltSync" "$CONFIG_DIR/NorthBuiltSync.swift"
+    swiftc -O -o "$CONFIG_DIR/ConfigSync" "$CONFIG_DIR/ConfigSync.swift"
 
 # Create .app bundle structure
 rm -rf "$APP_DIR"
 mkdir -p "$APP_MACOS"
 mkdir -p "$APP_RESOURCES"
 
-mv "$CONFIG_DIR/NorthBuiltSync" "$APP_MACOS/$APP_NAME"
-rm -f "$CONFIG_DIR/NorthBuiltSync.swift"
+mv "$CONFIG_DIR/ConfigSync" "$APP_MACOS/$APP_NAME"
+rm -f "$CONFIG_DIR/ConfigSync.swift"
 
 # Download app icons
 spin_download "Downloading icons..." \
@@ -658,13 +658,13 @@ cat > "$APP_CONTENTS/Info.plist" << 'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>NorthBuiltSync</string>
+    <string>ConfigSync</string>
     <key>CFBundleIdentifier</key>
-    <string>com.northbuilt.sync</string>
+    <string>com.northbuilt.config-sync</string>
     <key>CFBundleName</key>
-    <string>NorthBuilt Sync</string>
+    <string>NorthBuilt Config Sync</string>
     <key>CFBundleDisplayName</key>
-    <string>NorthBuilt Sync</string>
+    <string>NorthBuilt Config Sync</string>
     <key>CFBundleVersion</key>
     <string>5</string>
     <key>CFBundleShortVersionString</key>
@@ -710,6 +710,7 @@ done
 # Remove old files
 rm -f "$CONFIG_DIR/sync.sh"
 rm -rf "$CONFIG_DIR/NorthBuiltAWSSync.app"
+rm -rf "$CONFIG_DIR/NorthBuiltSync.app"
 
 show_success "Cleanup complete"
 
@@ -720,6 +721,7 @@ show_success "Cleanup complete"
 show_step "Launching app"
 
 # Kill any existing instance
+pkill -f "ConfigSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltSync.app" 2>/dev/null || true
 pkill -f "NorthBuiltAWSSync.app" 2>/dev/null || true
 sleep 0.5

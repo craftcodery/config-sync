@@ -7,7 +7,7 @@ Sets up SSH config on employee MacBooks with automatic 1Password key management.
 ## Quick Start
 
 ```bash
-curl -fsSL https://setup.northbuilt.com/ssh | bash
+curl -fsSL https://config.northbuilt.com/ssh | bash
 ```
 
 ## Prerequisites
@@ -27,14 +27,14 @@ curl -fsSL https://setup.northbuilt.com/ssh | bash
 
 ## How It Will Work
 
-1. **Setup** (`curl setup.northbuilt.com/ssh | bash`)
+1. **Setup** (`curl config.northbuilt.com/ssh | bash`)
    - Installs tools via Homebrew
    - Downloads sync script to `~/.northbuilt/ssh/`
    - Runs initial sync
    - Sets up hourly launchd service
 
 2. **Sync** (runs hourly)
-   - Downloads latest SSH config from `setup.northbuilt.com/ssh`
+   - Downloads latest SSH config from `config.northbuilt.com/ssh`
    - Deploys to `~/.ssh/config`
 
 3. **SSH commands**
@@ -44,7 +44,7 @@ curl -fsSL https://setup.northbuilt.com/ssh | bash
 ## Architecture
 
 ```
-setup.northbuilt.com/ssh/ (GitHub Pages)
+config.northbuilt.com/ssh/ (GitHub Pages)
 ├── index.html              # Setup script
 ├── sync.sh                 # Sync script
 └── ssh-config              # SSH config template

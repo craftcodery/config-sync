@@ -41,7 +41,7 @@ If you suspect the repository has been compromised:
 2. Check recent commits and PRs for unauthorized changes
 3. On affected machines, stop the menu bar app:
    ```bash
-   osascript -e 'quit app "NorthBuilt Sync"'
+   osascript -e 'quit app "NorthBuilt Config Sync"'
    ```
 4. Review `~/.aws/config` and `~/.northbuilt/aws/` for unauthorized modifications
 5. Rotate any potentially exposed credentials in 1Password
@@ -51,9 +51,9 @@ If you suspect the repository has been compromised:
 
 ### Downloaded Content
 
-The sync app downloads from `setup.northbuilt.com` over HTTPS:
-- `aws-config` template (hourly)
-- `version.json` for update checks (every 6 hours)
+The sync app downloads from `config.northbuilt.com` over HTTPS:
+- `aws-config` template (daily)
+- GitHub Releases API for update checks (every 6 hours)
 - Swift source files (during updates)
 
 The trust model assumes:
@@ -64,8 +64,8 @@ The trust model assumes:
 ### Self-Updating
 
 The app can update itself by:
-1. Checking `version.json` for new versions
-2. Downloading new Swift source files
+1. Checking GitHub Releases API for new versions
+2. Downloading new Swift source files from release assets
 3. Compiling locally with `swiftc`
 4. Replacing its own binary and restarting
 
@@ -88,7 +88,7 @@ The app can update itself by:
 - Logs are written to macOS unified logging (viewable in Console.app or Terminal)
 - Logs contain sync status and error messages, but not credentials
 - Item names from 1Password are marked with `privacy: .private` for redaction
-- Filter: `subsystem == "com.northbuilt.sync"`
+- Filter: `subsystem == "com.northbuilt.config-sync"`
 
 ### Network Security
 

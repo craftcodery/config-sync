@@ -6,7 +6,7 @@ import Network
 
 // MARK: - Logger
 
-private let logger = Logger(subsystem: "com.northbuilt.sync", category: "sync")
+private let logger = Logger(subsystem: "com.northbuilt.config-sync", category: "sync")
 
 // MARK: - Version
 
@@ -18,8 +18,8 @@ private enum AppVersion {
 // MARK: - Configuration
 
 private enum Config {
-    static let baseURL = "https://setup.northbuilt.com/aws"
-    static let githubReleasesURL = "https://api.github.com/repos/craftcodery/northbuilt-config-sync/releases/latest"
+    static let baseURL = "https://config.northbuilt.com/aws"
+    static let githubReleasesURL = "https://api.github.com/repos/craftcodery/config-sync/releases/latest"
     static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".northbuilt/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
@@ -107,7 +107,7 @@ class NetworkMonitor {
     static let shared = NetworkMonitor()
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "com.northbuilt.sync.networkmonitor")
+    private let queue = DispatchQueue(label: "com.northbuilt.config-sync.networkmonitor")
     private(set) var isConnected = true
 
     func start() {
@@ -219,7 +219,7 @@ class UpdateManager {
                 return nil
             }
 
-            guard let appURL = findAssetURL(name: "NorthBuiltSync.swift"),
+            guard let appURL = findAssetURL(name: "ConfigSync.swift"),
                   let helperURL = findAssetURL(name: "aws-vault-1password.swift"),
                   let iconURL = findAssetURL(name: "AppIcon.icns"),
                   let menuBarIconURL = findAssetURL(name: "MenuBarIcon.png") else {
@@ -329,7 +329,7 @@ class UpdateManager {
 
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("NorthBuiltSync/\(AppVersion.current)", forHTTPHeaderField: "User-Agent")
+        request.setValue("ConfigSync/\(AppVersion.current)", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -359,7 +359,7 @@ class UpdateManager {
             throw UpdateError.networkError("No version info available")
         }
 
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("NorthBuiltSync-update-\(UUID().uuidString)")
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ConfigSync-update-\(UUID().uuidString)")
 
         do {
             // Create temp directory
@@ -370,7 +370,7 @@ class UpdateManager {
             status = .downloading
             progressHandler("Downloading update...")
 
-            let appSourcePath = tempDir.appendingPathComponent("NorthBuiltSync.swift")
+            let appSourcePath = tempDir.appendingPathComponent("ConfigSync.swift")
             try await downloadFile(from: versionInfo.assets.appURL, to: appSourcePath)
             logger.notice("Downloaded app source")
 
@@ -391,7 +391,7 @@ class UpdateManager {
             status = .compiling
             progressHandler("Compiling update...")
 
-            let compiledAppPath = tempDir.appendingPathComponent("NorthBuiltSync")
+            let compiledAppPath = tempDir.appendingPathComponent("ConfigSync")
             try await compileSwift(source: appSourcePath, output: compiledAppPath)
             logger.notice("Compiled app")
 
@@ -462,7 +462,7 @@ class UpdateManager {
 
             // Send notification
             NotificationManager.shared.sendNotification(
-                title: "NorthBuilt Sync Updated",
+                title: "NorthBuilt Config Sync Updated",
                 body: "Updated to v\(versionInfo.version). Restarting..."
             )
 
@@ -950,7 +950,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         // About
-        let aboutItem = NSMenuItem(title: "About NorthBuilt Sync", action: #selector(aboutClicked), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About NorthBuilt Config Sync", action: #selector(aboutClicked), keyEquivalent: "")
         aboutItem.target = self
         statusMenu.addItem(aboutItem)
 
@@ -977,7 +977,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Send notification about update
             NotificationManager.shared.sendNotification(
-                title: "NorthBuilt Sync Update Available",
+                title: "NorthBuilt Config Sync Update Available",
                 body: "Version \(info.version) is ready to install"
             )
         } else {
@@ -1005,14 +1005,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 Preferences.shared.consecutiveFailures = 0
                 if isFirstSync {
                     NotificationManager.shared.sendNotification(
-                        title: "NorthBuilt Sync",
+                        title: "NorthBuilt Config Sync",
                         body: "AWS configuration synced successfully"
                     )
                 }
             } else {
                 Preferences.shared.consecutiveFailures += 1
                 NotificationManager.shared.sendNotification(
-                    title: "NorthBuilt Sync Failed",
+                    title: "NorthBuilt Config Sync Failed",
                     body: result.message,
                     isError: true
                 )
@@ -1193,7 +1193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let script = """
         tell application "Terminal"
             activate
-            do script "log show --last 1h --predicate 'subsystem == \"com.northbuilt.sync\"' --style compact"
+            do script "log show --last 1h --predicate 'subsystem == \"com.northbuilt.config-sync\"' --style compact"
         end tell
         """
 
@@ -1240,7 +1240,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func aboutClicked() {
         let alert = NSAlert()
-        alert.messageText = "NorthBuilt Sync"
+        alert.messageText = "NorthBuilt Config Sync"
         alert.informativeText = """
         Version \(AppVersion.current) (build \(AppVersion.build))
 

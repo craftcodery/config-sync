@@ -1,0 +1,17 @@
+{
+  "branding": {
+    "orgName": "NorthBuilt",
+    "appName": "NorthBuilt Config Sync",
+    "appNameShort": "Config Sync",
+    "bundleId": "com.northbuilt.config-sync",
+    "domain": "config.northbuilt.com",
+    "localDir": ".northbuilt"
+  },
+  "github": {
+    "owner": "craftcodery",
+    "repo": "config-sync"
+  },
+  "onepassword": {
+    "account": "craftcodery.1password.com"
+  }
+}

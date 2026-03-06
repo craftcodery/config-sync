@@ -8,15 +8,15 @@ Configuration sync tools for NorthBuilt employee workstations. Native macOS menu
 
 | Tool | Command | Status |
 |------|---------|--------|
-| [AWS](docs/aws/) | `curl -fsSL https://setup.northbuilt.com/aws \| bash` | Ready |
-| [SSH](docs/ssh/) | `curl -fsSL https://setup.northbuilt.com/ssh \| bash` | Coming soon |
+| [AWS](docs/aws/) | `curl -fsSL https://config.northbuilt.com/aws \| bash` | Ready |
+| [SSH](docs/ssh/) | `curl -fsSL https://config.northbuilt.com/ssh \| bash` | Coming soon |
 
-Or visit [setup.northbuilt.com](https://setup.northbuilt.com) to see all available setup scripts.
+Or visit [config.northbuilt.com](https://config.northbuilt.com) to see all available setup scripts.
 
 ## Features
 
 - **Native macOS Apps**: Menu bar apps built in Swift, compiled locally
-- **Automatic Sync**: Configuration syncs hourly in the background
+- **Automatic Sync**: Configuration syncs daily at 8:00 AM Central
 - **Self-Updating**: Apps check for updates and can update themselves from source
 - **1Password Integration**: Credentials fetched securely on-demand
 - **Network-Aware**: Skips sync when offline, resumes when connected
@@ -33,8 +33,8 @@ All setup scripts require:
    - Enable "Integrate with 1Password CLI"
 3. **Automation permission for 1Password** (one-time approval):
    - When you see "op would like to access data from other apps", click **Allow**
-   - This grants permission to the sync app (`NorthBuilt Sync`) - the choice persists
-   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt Sync"
+   - This grants permission to the sync app (`NorthBuilt Config Sync`) - the choice persists
+   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt Config Sync"
 
 ## How It Works
 
@@ -46,7 +46,7 @@ Each tool follows the same pattern:
    - Creates menu bar app bundle
    - Launches and runs initial sync
 
-2. **Sync** — Menu bar app syncs hourly (or manually via menu)
+2. **Sync** — Menu bar app syncs daily (or manually via menu)
    - Downloads latest config template
    - Substitutes values from 1Password
    - Deploys to appropriate location
@@ -63,13 +63,13 @@ Each tool follows the same pattern:
 ## Repository Structure
 
 ```
-docs/                           # Served via GitHub Pages at setup.northbuilt.com
+docs/                           # Served via GitHub Pages at config.northbuilt.com
 ├── index.html                  # Landing page
 ├── CNAME                       # Custom domain config
+├── config.json                 # Centralized branding configuration
 └── [tool]/                     # Each tool has its own directory
     ├── README.md               # Tool-specific documentation
     ├── index.html              # Setup script (curl-able)
-    ├── version.json            # Version info for auto-updates
     ├── *.swift                 # Swift source files (compiled during setup)
     └── *.icns, *.png           # App and menu bar icons
 ```
@@ -92,6 +92,9 @@ See individual tool READMEs for administration guides:
 ### Releasing Updates
 
 1. Make changes to Swift source files
-2. Update `version.json` with new version number and release notes
-3. Commit and push (requires 2+ approvals)
-4. Users receive update notification within 6 hours
+2. Commit with descriptive message (this becomes release notes)
+   - Use `[minor]` or `[major]` tags in commit message for larger bumps
+   - Normal commits trigger patch version bumps
+3. Push to main (requires 2+ approvals)
+4. GitHub Actions automatically creates a release with version tag
+5. Users receive update notification within 6 hours

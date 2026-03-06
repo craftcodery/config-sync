@@ -7,7 +7,7 @@ Sets up AWS CLI on employee MacBooks with automatic 1Password credential integra
 ## Quick Start
 
 ```bash
-curl -fsSL https://setup.northbuilt.com/aws | bash
+curl -fsSL https://config.northbuilt.com/aws | bash
 ```
 
 ## Prerequisites
@@ -50,23 +50,23 @@ Credentials are fetched automatically from 1Password. MFA codes are retrieved au
 After setup, the NorthBuilt icon appears in your menu bar:
 
 ```
-┌─────────────────────────────┐
-│ Status: Synced              │
-│ Last sync: 2 min ago        │
-│ Update Available (v1.3.0)   │  ← Only shown when update ready
-├─────────────────────────────┤
-│ Sync Now              ⌘S    │
-│ Check for Updates...        │
-├─────────────────────────────┤
-│ View Logs...          ⌘L    │
-│ Open AWS Config       ⌘O    │
-├─────────────────────────────┤
-│ Notifications         ✓     │
-│ Launch at Login       ✓     │
-├─────────────────────────────┤
-│ About NorthBuilt Sync       │
-│ Quit                  ⌘Q    │
-└─────────────────────────────┘
+┌─────────────────────────────────┐
+│ Status: Synced                  │
+│ Last sync: 2 min ago            │
+│ Update Available (v1.3.0)       │  ← Only shown when update ready
+├─────────────────────────────────┤
+│ Sync Now                  ⌘S    │
+│ Check for Updates...            │
+├─────────────────────────────────┤
+│ View Logs...              ⌘L    │
+│ Open AWS Config           ⌘O    │
+├─────────────────────────────────┤
+│ Notifications             ✓     │
+│ Launch at Login           ✓     │
+├─────────────────────────────────┤
+│ About NorthBuilt Config Sync    │
+│ Quit                      ⌘Q    │
+└─────────────────────────────────┘
 ```
 
 ### Menu Items
@@ -103,10 +103,10 @@ View sync logs via the menu bar app (View Logs...) or manually:
 
 ```bash
 # Last hour of logs
-log show --predicate 'subsystem == "com.northbuilt.sync"' --last 1h --style compact
+log show --predicate 'subsystem == "com.northbuilt.config-sync"' --last 1h --style compact
 
 # Stream live logs
-log stream --predicate 'subsystem == "com.northbuilt.sync"'
+log stream --predicate 'subsystem == "com.northbuilt.config-sync"'
 ```
 
 ## How It Works
@@ -114,14 +114,14 @@ log stream --predicate 'subsystem == "com.northbuilt.sync"'
 ### Initial Setup
 
 ```bash
-curl -fsSL https://setup.northbuilt.com/aws | bash
+curl -fsSL https://config.northbuilt.com/aws | bash
 ```
 
 1. Installs Homebrew (if needed)
 2. Installs tools: AWS CLI, jq, gum, glow, 1Password CLI
 3. Downloads Swift source files
 4. Compiles `aws-vault-1password` credential helper
-5. Compiles `NorthBuiltSync.app` menu bar app
+5. Compiles `ConfigSync.app` menu bar app
 6. Creates app bundle with icons
 7. Launches app and runs initial sync
 
@@ -174,7 +174,7 @@ GitHub Repository
     ├── index.html                 # Setup script (bash)
     ├── aws-config                 # AWS config template with placeholders
     ├── aws-vault-1password.swift  # Credential helper source
-    ├── NorthBuiltSync.swift       # Menu bar app source
+    ├── ConfigSync.swift           # Menu bar app source
     ├── AppIcon.icns               # App icon (Finder, Activity Monitor)
     ├── MenuBarIcon.png            # Menu bar icon (18x18 @2x)
     ├── 1password-standard.md      # 1Password entry documentation
@@ -184,15 +184,15 @@ GitHub Repository
 
 GitHub Releases (auto-created on push)
 └── v1.3.1/                        # Release tag
-    ├── NorthBuiltSync.swift       # Attached assets for updates
+    ├── ConfigSync.swift           # Attached assets for updates
     ├── aws-vault-1password.swift
     ├── AppIcon.icns
     └── MenuBarIcon.png
 
 ~/.northbuilt/aws/ (on employee machines)
-├── NorthBuiltSync.app/         # Menu bar app bundle
+├── ConfigSync.app/             # Menu bar app bundle
 │   └── Contents/
-│       ├── MacOS/NorthBuiltSync    # Compiled binary
+│       ├── MacOS/ConfigSync       # Compiled binary
 │       ├── Resources/
 │       │   ├── AppIcon.icns
 │       │   └── MenuBarIcon.png
@@ -237,7 +237,7 @@ Releases are automated via GitHub Actions. When you push changes to app files, a
 
 **Workflow:**
 
-1. Make changes to `NorthBuiltSync.swift`, `aws-vault-1password.swift`, or other app files
+1. Make changes to `ConfigSync.swift`, `aws-vault-1password.swift`, or other app files
 2. Commit with a descriptive message (this becomes the release notes)
    ```bash
    git commit -m "Fix sync timing issue"           # Patch bump (1.3.0 → 1.3.1)
@@ -258,7 +258,7 @@ Releases are automated via GitHub Actions. When you push changes to app files, a
 | `index.html` | Setup script (dual-purpose: webpage + bash) |
 | `aws-config` | AWS config template with placeholders |
 | `aws-vault-1password.swift` | Credential helper source |
-| `NorthBuiltSync.swift` | Menu bar app source |
+| `ConfigSync.swift` | Menu bar app source |
 | `AppIcon.icns` | App icon (multi-resolution) |
 | `MenuBarIcon.png` | Menu bar icon (36x36 for retina) |
 | `demo.gif` | Animated demo for README |
@@ -302,7 +302,7 @@ This macOS prompt appears when 1Password CLI first communicates with the 1Passwo
 
 If you clicked "Don't Allow":
 1. Go to System Settings → Privacy & Security → Automation
-2. Find "NorthBuilt Sync" and enable the toggle for "1Password"
+2. Find "NorthBuilt Config Sync" and enable the toggle for "1Password"
 
 **For terminal usage:**
 1. Click **Allow** when prompted
@@ -310,8 +310,8 @@ If you clicked "Don't Allow":
 
 ### Menu bar icon not showing
 
-1. Check if the app is running: `pgrep -f NorthBuiltSync`
-2. If not running, launch it: `open ~/.northbuilt/aws/NorthBuiltSync.app`
+1. Check if the app is running: `pgrep -f ConfigSync`
+2. If not running, launch it: `open ~/.northbuilt/aws/ConfigSync.app`
 3. On MacBooks with notch: Cmd-drag menu bar icons to reorder (move NorthBuilt left)
 4. Check logs: View Logs... from another menu bar app or Terminal
 
@@ -338,22 +338,22 @@ The app detected no network connectivity. It will automatically retry when conne
 
 ### From Previous Bash-Based System
 
-1. Re-run the setup script: `curl -fsSL https://setup.northbuilt.com/aws | bash`
+1. Re-run the setup script: `curl -fsSL https://config.northbuilt.com/aws | bash`
 2. The script automatically removes the old launchd service
 3. The menu bar app replaces the background sync service
 
-### From NorthBuiltAWSSync to NorthBuiltSync
+### From NorthBuiltSync to ConfigSync
 
-The app was renamed. Re-running setup will:
-1. Remove old `NorthBuiltAWSSync.app`
-2. Install new `NorthBuiltSync.app`
+The app was renamed for broader compatibility. Re-running setup will:
+1. Remove old `NorthBuiltSync.app`
+2. Install new `ConfigSync.app`
 3. Preserve your settings
 
 ## Uninstalling
 
 ```bash
 # Quit the menu bar app
-osascript -e 'quit app "NorthBuilt Sync"'
+osascript -e 'quit app "NorthBuilt Config Sync"'
 
 # Remove the app and config
 rm -rf ~/.northbuilt/aws
