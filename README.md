@@ -98,3 +98,94 @@ See individual tool READMEs for administration guides:
 3. Push to main (requires 2+ approvals)
 4. GitHub Actions automatically creates a release with version tag
 5. Users receive update notification within 6 hours
+
+## Using This Template for Your Organization
+
+This repository is designed to be easily adapted for other organizations. The setup script dynamically loads branding from `config.json` and substitutes values into the Swift source before compiling.
+
+### Quick Start
+
+1. **Fork or use as template** — Create your own copy of this repository
+
+2. **Update `docs/config.json`** — Change all branding values:
+   ```json
+   {
+     "branding": {
+       "orgName": "YourCompany",
+       "appName": "YourCompany Config Sync",
+       "appNameShort": "Config Sync",
+       "bundleId": "com.yourcompany.config-sync",
+       "domain": "config.yourcompany.com",
+       "localDir": ".yourcompany"
+     },
+     "github": {
+       "owner": "your-github-org",
+       "repo": "your-repo-name"
+     },
+     "onepassword": {
+       "account": "yourcompany.1password.com"
+     }
+   }
+   ```
+
+3. **Update `docs/CNAME`** — Set your custom domain:
+   ```
+   config.yourcompany.com
+   ```
+
+4. **Update `docs/aws/index.html`** — Change the bootstrap URL (line ~42):
+   ```bash
+   BASE_URL="https://config.yourcompany.com/aws"
+   ```
+
+5. **Update `docs/aws/aws-config`** — Replace with your AWS profiles and 1Password item references
+
+6. **Configure GitHub Pages** — In repository Settings → Pages:
+   - Source: Deploy from branch `main`
+   - Folder: `/docs`
+   - Custom domain: `config.yourcompany.com`
+
+7. **Configure DNS** — Point your domain to GitHub Pages:
+   ```
+   config.yourcompany.com  CNAME  your-github-org.github.io
+   ```
+
+### What Gets Auto-Configured
+
+The setup script automatically substitutes these values from `config.json`:
+
+| Placeholder in Swift | Replaced with |
+|---------------------|---------------|
+| `config.northbuilt.com` | Your domain |
+| `craftcodery/config-sync` | Your GitHub owner/repo |
+| `craftcodery.1password.com` | Your 1Password account |
+| `NorthBuilt Config Sync` | Your app name |
+| `com.northbuilt.config-sync` | Your bundle ID |
+| `.northbuilt` | Your local directory |
+| `NorthBuilt` | Your org name |
+
+### Files to Customize
+
+| File | What to change |
+|------|----------------|
+| `docs/config.json` | All branding values (required) |
+| `docs/CNAME` | Your custom domain (required) |
+| `docs/aws/index.html` | Bootstrap URL on line ~42 (required) |
+| `docs/aws/aws-config` | Your AWS profiles and 1Password items |
+| `docs/index.html` | Landing page title and description |
+| `docs/aws/README.md` | Documentation for your users |
+| `README.md` | This file - update for your org |
+| `SECURITY.md` | Security documentation |
+| `docs/aws/AppIcon.icns` | Your app icon |
+| `docs/aws/MenuBarIcon.png` | Your menu bar icon |
+
+### Optional: Custom Logo
+
+The ASCII art logo in `docs/aws/index.html` shows "NORTHBUILT". Generate your own ASCII art at [patorjk.com/software/taag](https://patorjk.com/software/taag/) using the "ANSI Shadow" font, then replace the logo in `show_logo()`.
+
+### Architecture Notes
+
+- **No server-side processing** — Everything runs via GitHub Pages (static hosting)
+- **Compile from source** — Swift files are downloaded and compiled on each user's machine
+- **GitHub Releases** — Auto-updates fetch new versions from GitHub Releases API
+- **1Password integration** — Credentials are never stored; fetched on-demand via `op` CLI
