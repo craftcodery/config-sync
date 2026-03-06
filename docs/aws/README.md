@@ -7,7 +7,7 @@ Sets up AWS CLI on employee MacBooks with automatic 1Password credential integra
 ## Quick Start
 
 ```bash
-curl -fsSL https://config.northbuilt.com/aws | bash
+curl -fsSL config.northbuilt.com/aws | bash
 ```
 
 ## Prerequisites
@@ -114,7 +114,7 @@ log stream --predicate 'subsystem == "com.northbuilt.config-sync"'
 ### Initial Setup
 
 ```bash
-curl -fsSL https://config.northbuilt.com/aws | bash
+curl -fsSL config.northbuilt.com/aws | bash
 ```
 
 1. Installs Homebrew (if needed)
@@ -338,7 +338,7 @@ The app detected no network connectivity. It will automatically retry when conne
 
 ### From Previous Bash-Based System
 
-1. Re-run the setup script: `curl -fsSL https://config.northbuilt.com/aws | bash`
+1. Re-run the setup script: `curl -fsSL config.northbuilt.com/aws | bash`
 2. The script automatically removes the old launchd service
 3. The menu bar app replaces the background sync service
 

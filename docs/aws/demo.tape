@@ -43,7 +43,7 @@ Show
 Sleep 100ms
 
 # Type the install command (purely visual - never actually executed)
-Type "curl -fsSL https://config.northbuilt.com/aws | bash"
+Type "curl -fsSL config.northbuilt.com/aws | bash"
 Sleep 500ms
 Enter
 

@@ -8,8 +8,8 @@ Configuration sync tools for NorthBuilt employee workstations. Native macOS menu
 
 | Tool | Command | Status |
 |------|---------|--------|
-| [AWS](docs/aws/) | `curl -fsSL https://config.northbuilt.com/aws \| bash` | Ready |
-| [SSH](docs/ssh/) | `curl -fsSL https://config.northbuilt.com/ssh \| bash` | Coming soon |
+| [AWS](docs/aws/) | `curl -fsSL config.northbuilt.com/aws \| bash` | Ready |
+| [SSH](docs/ssh/) | `curl -fsSL config.northbuilt.com/ssh \| bash` | Coming soon |
 
 Or visit [config.northbuilt.com](https://config.northbuilt.com) to see all available setup scripts.
 

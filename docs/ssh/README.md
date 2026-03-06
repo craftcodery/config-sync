@@ -7,7 +7,7 @@ Sets up SSH config on employee MacBooks with automatic 1Password key management.
 ## Quick Start
 
 ```bash
-curl -fsSL https://config.northbuilt.com/ssh | bash
+curl -fsSL config.northbuilt.com/ssh | bash
 ```
 
 ## Prerequisites
