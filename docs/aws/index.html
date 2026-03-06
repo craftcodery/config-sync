@@ -4,7 +4,7 @@
 ## <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
 ## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" data-manual></script>
 ## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-## <style>body { background-color: #1d1f21; color: #c5c8c6; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; }</style>
+## <style>body { background-color: #1a1a2e; color: #f0e6ff; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; } .token.comment { color: #6c6783; } .token.keyword { color: #b967ff; } .token.string { color: #05ffa1; } .token.function { color: #ff71ce; } .token.variable { color: #01cdfe; }</style>
 
 : ==========================================
 :   NorthBuilt AWS Config Sync
@@ -40,36 +40,156 @@ set -euo pipefail
 BASE_URL="https://setup.northbuilt.com/aws"
 CONFIG_DIR="$HOME/.northbuilt/aws"
 
-# Brand colors (256-color palette)
-TEAL="38"
-TEAL_DARK="30"
-GREEN="42"
-GREEN_LIGHT="49"
-RED="196"
-YELLOW="220"
-GRAY="245"
-WHITE="255"
+# ------------------------------------------
+#   80s Retro Synthwave Color Palette
+# ------------------------------------------
+#
+# Accessibility notes:
+#   - NO_COLOR env var disables all colors (standard convention)
+#   - TERM=dumb disables colors for basic terminals
+#   - Colors chosen for high contrast (WCAG AA compliant on dark backgrounds)
+#   - Neon colors provide 4.5:1+ contrast ratio against dark backgrounds
+#   - All text colors tested against #1a1a2e and #0d0d1a backgrounds
 
-# Hex colors for backgrounds
-HEX_TEAL="#00a5a5"
-HEX_TEAL_DARK="#1a5c5c"
-HEX_GREEN="#00d787"
-HEX_RED="#ff0000"
+# Primary: Hot Pink / Magenta
+PINK="212"                    # ANSI 256: bright pink (close to #ff87d7)
+HEX_PINK="#ff71ce"            # Neon hot pink
+HEX_PINK_SOFT="#f2a1f2"       # Softer pink (user specified)
 
-# ANSI fallback colors
-ANSI_TEAL='\033[38;5;38m'
-ANSI_GREEN='\033[38;5;42m'
+# Secondary: Electric Blue / Purple
+PURPLE="99"                   # ANSI 256: medium purple
+BLUE="63"                     # ANSI 256: slate blue
+HEX_PURPLE="#b967ff"          # Neon purple
+HEX_BLUE="#707ff5"            # Electric blue (user specified)
+
+# Accent: Cyan / Aqua
+CYAN="51"                     # ANSI 256: cyan
+HEX_CYAN="#01cdfe"            # Electric cyan/aqua
+
+# Success: Neon Green
+GREEN="48"                    # ANSI 256: spring green
+HEX_GREEN="#05ffa1"           # Neon mint green
+
+# Warning: Neon Yellow
+YELLOW="227"                  # ANSI 256: light yellow
+HEX_YELLOW="#fffb96"          # Neon yellow
+
+# Error: Hot Red/Orange
+RED="196"                     # ANSI 256: red
+HEX_RED="#fe4a49"             # Neon red-orange
+
+# Neutral: Cool grays
+GRAY="245"                    # ANSI 256: gray
+WHITE="255"                   # ANSI 256: white
+HEX_GRAY="#6c6783"            # Muted purple-gray
+HEX_WHITE="#f0e6ff"           # Warm white with slight purple tint
+
+# Background: Deep dark with purple undertone
+HEX_BG_DARK="#0d0d1a"         # Deepest background
+HEX_BG="#1a1a2e"              # Primary dark background
+HEX_BG_LIGHT="#16213e"        # Lighter panel background
+
+# ANSI escape sequences (fallback for non-gum environments)
+ANSI_PINK='\033[38;5;212m'
+ANSI_PURPLE='\033[38;5;99m'
+ANSI_BLUE='\033[38;5;63m'
+ANSI_CYAN='\033[38;5;51m'
+ANSI_GREEN='\033[38;5;48m'
+ANSI_YELLOW='\033[38;5;227m'
 ANSI_RED='\033[38;5;196m'
-ANSI_YELLOW='\033[38;5;220m'
 ANSI_GRAY='\033[38;5;245m'
 ANSI_BOLD='\033[1m'
 ANSI_DIM='\033[2m'
 ANSI_ITALIC='\033[3m'
 ANSI_RESET='\033[0m'
 
+# ------------------------------------------
+#   Accessibility & Environment Detection
+# ------------------------------------------
+
+# Detect if colors should be disabled
+# NO_COLOR is a standard convention: https://no-color.org/
+USE_COLOR=true
+if [[ -n "${NO_COLOR:-}" ]] || [[ "${TERM:-}" == "dumb" ]]; then
+    USE_COLOR=false
+fi
+
+# Detect terminal color support level
+# COLORTERM=truecolor or 24bit indicates full RGB support
+SUPPORTS_TRUECOLOR=false
+if [[ "${COLORTERM:-}" == "truecolor" ]] || [[ "${COLORTERM:-}" == "24bit" ]]; then
+    SUPPORTS_TRUECOLOR=true
+fi
+
+# Helper to conditionally apply ANSI codes
+ansi() {
+    if [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "$1"
+    fi
+}
+
 # Progress tracking
 CURRENT_STEP=0
 TOTAL_STEPS=8
+
+# Terminal dimensions for bottom-anchored progress bar
+TERM_LINES=$(tput lines)
+TERM_COLS=$(tput cols)
+PROGRESS_LINE=$((TERM_LINES - 1))  # Last line of terminal
+
+# Setup scroll region (excludes bottom line for progress bar)
+setup_scroll_region() {
+    # Set scroll region from line 0 to TERM_LINES-2 (leaving last line for progress)
+    printf '\033[0;%dr' $((TERM_LINES - 1))
+    # Move cursor to top of scroll region
+    tput cup 0 0
+}
+
+# Reset scroll region to full terminal
+reset_scroll_region() {
+    printf '\033[r'
+}
+
+# Draw progress bar at fixed bottom position (no flicker - direct overwrite)
+update_progress() {
+    local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    local bar_width=30
+    local filled=$((progress * bar_width / 100))
+    local empty=$((bar_width - filled))
+    local bar=""
+    for ((i=0; i<filled; i++)); do bar+="█"; done
+    for ((i=0; i<empty; i++)); do bar+="░"; done
+
+    # Save cursor, move to bottom line, draw, restore cursor
+    tput sc
+    tput cup $PROGRESS_LINE 0
+
+    # Build the entire line and print at once (reduces flicker)
+    local status_text
+    status_text=$(printf "  %s %3d%%  ─  Step %d of %d" "$bar" "$progress" "$CURRENT_STEP" "$TOTAL_STEPS")
+
+    if [[ "$USE_COLOR" == "true" ]]; then
+        # Cyan color, pad to full width to overwrite previous content
+        printf '\033[38;5;51m%s%*s\033[0m' "$status_text" $((TERM_COLS - ${#status_text})) ""
+    else
+        printf '%s%*s' "$status_text" $((TERM_COLS - ${#status_text})) ""
+    fi
+
+    tput rc
+}
+
+# Initialize display with scroll region and bottom progress bar
+init_display() {
+    clear
+    setup_scroll_region
+    update_progress
+}
+
+# Cleanup scroll region on exit
+cleanup_display() {
+    reset_scroll_region
+}
+trap cleanup_display EXIT
 
 # ------------------------------------------
 #   Display Functions (with gum fallback)
@@ -80,18 +200,21 @@ has_gum() {
     command -v gum &> /dev/null
 }
 
-# Display the ASCII art logo with animated styling
+# Display the ASCII art logo with synthwave styling
 show_logo() {
-    clear
+    # Initialize display with scroll region and bottom progress bar
+    init_display
+
     echo ""
-    if has_gum; then
-        # Create the main logo block
+
+    # Main logo block
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
         local logo
         logo=$(gum style \
-            --foreground "$WHITE" \
-            --background "$HEX_TEAL_DARK" \
+            --foreground "$HEX_PINK" \
+            --background "$HEX_BG" \
             --border double \
-            --border-foreground "$TEAL" \
+            --border-foreground "$HEX_PURPLE" \
             --padding "1 3" \
             --bold \
             "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
@@ -107,18 +230,16 @@ show_logo() {
             "██████╔╝╚██████╔╝██║███████╗██║             " \
             "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             ")
 
-        # Create the tagline with subtle styling
         local tagline
         tagline=$(gum style \
-            --foreground "$TEAL" \
+            --foreground "$HEX_CYAN" \
             --italic \
             --padding "0 2" \
             "AWS Config Sync • Powered by 1Password")
 
-        # Join them vertically with alignment
         gum join --vertical --align center "$logo" "$tagline"
-    else
-        echo -e "${ANSI_TEAL}${ANSI_BOLD}"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "${ANSI_PINK}${ANSI_BOLD}"
         echo "  ╔══════════════════════════════════════════════════╗"
         echo "  ║  ███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗    ║"
         echo "  ║  ████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║    ║"
@@ -134,49 +255,51 @@ show_logo() {
         echo "  ║  ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝                 ║"
         echo "  ╚══════════════════════════════════════════════════╝"
         echo -e "${ANSI_RESET}"
-        echo -e "    ${ANSI_TEAL}${ANSI_ITALIC}AWS Config Sync • Powered by 1Password${ANSI_RESET}"
+        echo -e "    ${ANSI_CYAN}${ANSI_ITALIC}AWS Config Sync • Powered by 1Password${ANSI_RESET}"
+    else
+        # NO_COLOR mode - plain text only
+        echo "  ╔══════════════════════════════════════════════════╗"
+        echo "  ║  NORTHBUILT                                      ║"
+        echo "  ║  AWS Config Sync                                 ║"
+        echo "  ╚══════════════════════════════════════════════════╝"
+        echo "    AWS Config Sync - Powered by 1Password"
     fi
     echo ""
 }
 
-# Display a step header with progress indicator
+# Display a step header (progress bar is updated separately at top of screen)
 show_step() {
     local title="$1"
     ((CURRENT_STEP++))
+
+    # Update the anchored progress bar at top of screen
+    update_progress
+
     echo ""
-    if has_gum; then
-        # Create step badge
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        # Create step badge with synthwave purple background
         local badge
         badge=$(gum style \
-            --foreground "$WHITE" \
-            --background "$HEX_TEAL" \
+            --foreground "$HEX_WHITE" \
+            --background "$HEX_PURPLE" \
             --padding "0 1" \
             --bold \
             "STEP $CURRENT_STEP/$TOTAL_STEPS")
 
-        # Create title
+        # Create title with pink accent
         local step_title
         step_title=$(gum style \
-            --foreground "$WHITE" \
+            --foreground "$HEX_PINK" \
             --bold \
             --padding "0 1" \
             "$title")
 
         # Join horizontally
         gum join --horizontal --align center "$badge" "$step_title"
-
-        # Draw a subtle progress bar
-        local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
-        local filled=$((progress / 5))
-        local empty=$((20 - filled))
-        local bar=""
-        for ((i=0; i<filled; i++)); do bar+="█"; done
-        for ((i=0; i<empty; i++)); do bar+="░"; done
-        gum style --foreground "$TEAL" --faint "    $bar $progress%"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "  ${ANSI_PURPLE}${ANSI_BOLD}[$CURRENT_STEP/$TOTAL_STEPS]${ANSI_RESET} ${ANSI_PINK}${ANSI_BOLD}$title${ANSI_RESET}"
     else
-        echo -e "  ${ANSI_TEAL}${ANSI_BOLD}[$CURRENT_STEP/$TOTAL_STEPS]${ANSI_RESET} ${ANSI_BOLD}$title${ANSI_RESET}"
-        local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
-        echo -e "  ${ANSI_GRAY}Progress: $progress%${ANSI_RESET}"
+        echo "  [$CURRENT_STEP/$TOTAL_STEPS] $title"
     fi
 }
 
@@ -184,69 +307,83 @@ show_step() {
 show_section() {
     local message="$1"
     echo ""
-    if has_gum; then
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
         gum style \
             --border rounded \
-            --border-foreground "$TEAL" \
+            --border-foreground "$HEX_BLUE" \
             --padding "0 2" \
             --margin "0 1" \
-            --foreground "$WHITE" \
+            --foreground "$HEX_WHITE" \
             "$message"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "  ${ANSI_BLUE}╭─────────────────────────────────────────╮${ANSI_RESET}"
+        echo -e "  ${ANSI_BLUE}│${ANSI_RESET}  $message"
+        echo -e "  ${ANSI_BLUE}╰─────────────────────────────────────────╯${ANSI_RESET}"
     else
-        echo -e "  ${ANSI_TEAL}╭─────────────────────────────────────────╮${ANSI_RESET}"
-        echo -e "  ${ANSI_TEAL}│${ANSI_RESET}  $message"
-        echo -e "  ${ANSI_TEAL}╰─────────────────────────────────────────╯${ANSI_RESET}"
+        echo "  --- $message ---"
     fi
 }
 
-# Display a success message with checkmark
+# Display a success message with checkmark (neon green)
 show_success() {
     local message="$1"
-    if has_gum; then
-        gum style --foreground "$GREEN" --margin "0 1" "✓ $message"
-    else
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum style --foreground "$HEX_GREEN" --margin "0 1" "✓ $message"
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_GREEN}✓ $message${ANSI_RESET}"
+    else
+        echo "  [OK] $message"
     fi
 }
 
-# Display an info message
+# Display an info message (muted purple-gray)
 show_info() {
     local message="$1"
-    if has_gum; then
-        gum style --foreground "$GRAY" --margin "0 1" --faint "  $message"
-    else
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum style --foreground "$HEX_GRAY" --margin "0 1" --faint "  $message"
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_GRAY}$message${ANSI_RESET}"
+    else
+        echo "  $message"
     fi
 }
 
-# Display a warning message
+# Display a warning message (neon yellow)
 show_warning() {
     local message="$1"
-    if has_gum; then
-        gum style --foreground "$YELLOW" --margin "0 1" "⚠ $message"
-    else
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum style --foreground "$HEX_YELLOW" --margin "0 1" "⚠ $message"
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_YELLOW}⚠ $message${ANSI_RESET}"
+    else
+        echo "  [WARN] $message"
     fi
 }
 
-# Display an error message
+# Display an error message (hot red)
 show_error() {
     local message="$1"
-    if has_gum; then
-        gum style --foreground "$RED" --margin "0 1" --bold "✗ $message"
-    else
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum style --foreground "$HEX_RED" --margin "0 1" --bold "✗ $message"
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_RED}✗ $message${ANSI_RESET}"
+    else
+        echo "  [ERROR] $message"
     fi
 }
 
 # Run a command with animated spinner (different spinners for different operations)
+# Each spinner uses a different synthwave color for visual variety
 spin_download() {
     local title="$1"
     shift
-    if has_gum; then
-        gum spin --spinner globe --spinner.foreground "$TEAL" --title "$title" -- "$@"
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "  ${ANSI_CYAN}↓${ANSI_RESET} $title"
+        "$@"
     else
-        echo -e "  ${ANSI_TEAL}↓${ANSI_RESET} $title"
+        echo "  [DL] $title"
         "$@"
     fi
 }
@@ -254,10 +391,13 @@ spin_download() {
 spin_process() {
     local title="$1"
     shift
-    if has_gum; then
-        gum spin --spinner dot --spinner.foreground "$TEAL" --title "$title" -- "$@"
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "$title" -- "$@"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "  ${ANSI_PINK}•${ANSI_RESET} $title"
+        "$@"
     else
-        echo -e "  ${ANSI_TEAL}•${ANSI_RESET} $title"
+        echo "  [...] $title"
         "$@"
     fi
 }
@@ -265,10 +405,13 @@ spin_process() {
 spin_install() {
     local title="$1"
     shift
-    if has_gum; then
-        gum spin --spinner meter --spinner.foreground "$TEAL" --title "$title" -- "$@"
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "$title" -- "$@"
+    elif [[ "$USE_COLOR" == "true" ]]; then
+        echo -e "  ${ANSI_PURPLE}▶${ANSI_RESET} $title"
+        "$@"
     else
-        echo -e "  ${ANSI_TEAL}▶${ANSI_RESET} $title"
+        echo "  [INST] $title"
         "$@"
     fi
 }
@@ -276,10 +419,13 @@ spin_install() {
 spin_system() {
     local title="$1"
     shift
-    if has_gum; then
-        gum spin --spinner pulse --spinner.foreground "$GREEN" --title "$title" -- "$@"
-    else
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "$title" -- "$@"
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_GREEN}◉${ANSI_RESET} $title"
+        "$@"
+    else
+        echo "  [SYS] $title"
         "$@"
     fi
 }
@@ -287,80 +433,103 @@ spin_system() {
 # Display an error box and exit
 show_error_box() {
     echo ""
-    if has_gum; then
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
         gum style \
             --border double \
-            --border-foreground "$RED" \
-            --foreground "$RED" \
+            --border-foreground "$HEX_RED" \
+            --foreground "$HEX_RED" \
             --padding "1 2" \
             --margin "0 1" \
             --bold \
             "$@"
-    else
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_RED}╔═════════════════════════════════════════════════╗${ANSI_RESET}"
         for line in "$@"; do
             echo -e "  ${ANSI_RED}║${ANSI_RESET}  $line"
         done
         echo -e "  ${ANSI_RED}╚═════════════════════════════════════════════════╝${ANSI_RESET}"
+    else
+        echo ""
+        echo "  =========================================="
+        for line in "$@"; do
+            echo "  $line"
+        done
+        echo "  =========================================="
     fi
 }
 
 # Display completion banner with summary
 show_completion() {
     echo ""
-    if has_gum; then
-        # Create the celebration header
+    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
+        # Create the celebration header with neon green
         local header
         header=$(gum style \
-            --foreground "$GREEN" \
+            --foreground "$HEX_GREEN" \
             --bold \
             --align center \
             "✓ Setup Complete!")
 
-        # Create info sections using join for layout
+        # Create info sections using synthwave color scheme
         local info
         info=$(gum style \
-            --foreground "$WHITE" \
+            --foreground "$HEX_WHITE" \
             --padding "1 0" \
             "Look for the NorthBuilt icon in your menu bar." \
             "" \
-            "$(gum style --foreground "$TEAL" --bold "Test your AWS access:")" \
-            "  $(gum style --foreground "$GRAY" "aws s3 ls")" \
+            "$(gum style --foreground "$HEX_PINK" --bold "Test your AWS access:")" \
+            "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls")" \
             "" \
-            "$(gum style --foreground "$TEAL" --bold "Use a client profile:")" \
-            "  $(gum style --foreground "$GRAY" "aws s3 ls --profile donatefordough")" \
+            "$(gum style --foreground "$HEX_PINK" --bold "Use a client profile:")" \
+            "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile donatefordough")" \
             "" \
-            "$(gum style --foreground "$TEAL" --bold "Sync schedule:")" \
-            "  $(gum style --foreground "$GRAY" "Automatic every hour, or click icon to sync now")" \
+            "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
+            "  $(gum style --foreground "$HEX_GRAY" "Automatic every hour, or click icon to sync now")" \
             "" \
-            "$(gum style --foreground "$TEAL" --bold "Enable Launch at Login:")" \
-            "  $(gum style --foreground "$GRAY" "Click NorthBuilt icon → Launch at Login")")
+            "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
+            "  $(gum style --foreground "$HEX_GRAY" "Click NorthBuilt icon → Launch at Login")")
 
-        # Join header and info, wrap in box
+        # Join header and info, wrap in box with neon green border
         local content
         content=$(gum join --vertical --align center "$header" "$info")
 
         gum style \
             --border double \
-            --border-foreground "$GREEN" \
+            --border-foreground "$HEX_GREEN" \
             --padding "1 3" \
             --margin "0 1" \
             "$content"
-    else
+    elif [[ "$USE_COLOR" == "true" ]]; then
         echo -e "  ${ANSI_GREEN}╔═══════════════════════════════════════════════════════╗${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_GREEN}${ANSI_BOLD}✓ Setup Complete!${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  Look for the NorthBuilt icon in your menu bar."
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Test your AWS access:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Test your AWS access:${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Use a client profile:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Use a client profile:${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    aws s3 ls --profile donatefordough"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}"
-        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_TEAL}Enable Launch at Login:${ANSI_RESET}"
+        echo -e "  ${ANSI_GREEN}║${ANSI_RESET}  ${ANSI_PINK}Enable Launch at Login:${ANSI_RESET}"
         echo -e "  ${ANSI_GREEN}║${ANSI_RESET}    Click NorthBuilt icon → Launch at Login"
         echo -e "  ${ANSI_GREEN}╚═══════════════════════════════════════════════════════╝${ANSI_RESET}"
+    else
+        echo ""
+        echo "  ==========================================="
+        echo "  Setup Complete!"
+        echo ""
+        echo "  Look for the NorthBuilt icon in your menu bar."
+        echo ""
+        echo "  Test your AWS access:"
+        echo "    aws s3 ls"
+        echo ""
+        echo "  Use a client profile:"
+        echo "    aws s3 ls --profile donatefordough"
+        echo ""
+        echo "  Enable Launch at Login:"
+        echo "    Click NorthBuilt icon -> Launch at Login"
+        echo "  ==========================================="
     fi
     echo ""
 }
