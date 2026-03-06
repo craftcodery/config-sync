@@ -13,7 +13,7 @@ Set LineHeight 1.3
 
 # Dimensions - wide enough to prevent text wrapping
 Set Width 820
-Set Height 880
+Set Height 440
 Set Padding 20
 
 # Window styling (commented out - available if needed)
