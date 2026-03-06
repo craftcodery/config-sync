@@ -209,14 +209,11 @@ handle_resize() {
 }
 trap handle_resize WINCH
 
-# Initialize display with scroll region and bottom progress bar
+# Initialize display with bottom progress bar
 init_display() {
-    # Clear screen and move to home position using ANSI escape sequences
-    # (avoids issues with 'clear' command when stdin is piped)
-    printf '\033[2J\033[H'
+    # Don't clear screen - output starts immediately below the command
+    # Just set up scroll region and draw progress bar
     setup_scroll_region
-    # Position cursor at top of scroll region for initial content
-    printf '\033[H'
     update_progress
 }
 
