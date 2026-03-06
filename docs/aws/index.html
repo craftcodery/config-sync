@@ -141,6 +141,12 @@ ansi() {
     fi
 }
 
+# Escape special characters for sed replacement strings
+# Escapes: & \ | (our delimiter) and newlines
+sed_escape() {
+    printf '%s' "$1" | sed -e 's/[&/\|]/\\&/g'
+}
+
 # Progress tracking (used in step headers)
 CURRENT_STEP=0
 TOTAL_STEPS=8
@@ -562,23 +568,41 @@ show_success "jq ready"
 # This allows the entire setup to be customized by editing config.json
 
 CONFIG_JSON_URL="${BASE_URL%/*}/config.json"  # Strip /aws, add /config.json
-CONFIG_JSON=$(curl -fsSL "$CONFIG_JSON_URL")
+CONFIG_JSON=$(curl -fsSL "$CONFIG_JSON_URL") || {
+    show_error "Failed to fetch config.json from $CONFIG_JSON_URL"
+    exit 1
+}
+
+# Validate JSON is parseable
+if ! echo "$CONFIG_JSON" | jq empty 2>/dev/null; then
+    show_error "Invalid JSON in config.json"
+    exit 1
+fi
 
 # Extract branding values
-ORG_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.orgName')
-APP_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.appName')
-APP_NAME_SHORT=$(echo "$CONFIG_JSON" | jq -r '.branding.appNameShort')
+ORG_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.orgName // empty')
+APP_NAME=$(echo "$CONFIG_JSON" | jq -r '.branding.appName // empty')
+APP_NAME_SHORT=$(echo "$CONFIG_JSON" | jq -r '.branding.appNameShort // empty')
 APP_EXECUTABLE=$(echo "$APP_NAME_SHORT" | tr -d ' ')  # "Config Sync" → "ConfigSync"
-BUNDLE_ID=$(echo "$CONFIG_JSON" | jq -r '.branding.bundleId')
-DOMAIN=$(echo "$CONFIG_JSON" | jq -r '.branding.domain')
-LOCAL_DIR=$(echo "$CONFIG_JSON" | jq -r '.branding.localDir')
+BUNDLE_ID=$(echo "$CONFIG_JSON" | jq -r '.branding.bundleId // empty')
+DOMAIN=$(echo "$CONFIG_JSON" | jq -r '.branding.domain // empty')
+LOCAL_DIR=$(echo "$CONFIG_JSON" | jq -r '.branding.localDir // empty')
 
 # Extract GitHub values
-GITHUB_OWNER=$(echo "$CONFIG_JSON" | jq -r '.github.owner')
-GITHUB_REPO=$(echo "$CONFIG_JSON" | jq -r '.github.repo')
+GITHUB_OWNER=$(echo "$CONFIG_JSON" | jq -r '.github.owner // empty')
+GITHUB_REPO=$(echo "$CONFIG_JSON" | jq -r '.github.repo // empty')
 
 # Extract 1Password values
-OP_ACCOUNT_VALUE=$(echo "$CONFIG_JSON" | jq -r '.onepassword.account')
+OP_ACCOUNT_VALUE=$(echo "$CONFIG_JSON" | jq -r '.onepassword.account // empty')
+
+# Validate required fields
+for var in ORG_NAME APP_NAME BUNDLE_ID DOMAIN LOCAL_DIR GITHUB_OWNER GITHUB_REPO OP_ACCOUNT_VALUE; do
+    if [[ -z "${!var}" ]]; then
+        show_error "Missing required config value: $var"
+        show_info "Please check your config.json file"
+        exit 1
+    fi
+done
 
 # Set CONFIG_DIR based on loaded config
 CONFIG_DIR="$HOME/.$LOCAL_DIR/aws"
@@ -666,7 +690,8 @@ spin_download "Downloading credential helper..." \
     curl -fsSL "$BASE_URL/aws-vault-1password.swift" -o "$CONFIG_DIR/aws-vault-1password.swift"
 
 # Substitute branding values in Swift source before compiling
-sed -i.bak "s|craftcodery.1password.com|$OP_ACCOUNT_VALUE|g" "$CONFIG_DIR/aws-vault-1password.swift"
+# Use sed_escape to handle special characters in config values
+sed -i.bak "s|craftcodery.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/aws-vault-1password.swift"
 rm -f "$CONFIG_DIR/aws-vault-1password.swift.bak"
 
 spin_process "Compiling credential helper..." \
@@ -687,13 +712,14 @@ spin_download "Downloading menu bar app..." \
 
 # Substitute branding values in Swift source before compiling
 # Order matters: replace longer/more specific strings first
-sed -i.bak "s|config.northbuilt.com|$DOMAIN|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|craftcodery/config-sync|$GITHUB_OWNER/$GITHUB_REPO|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|craftcodery.1password.com|$OP_ACCOUNT_VALUE|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|NorthBuilt Config Sync|$APP_NAME|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|com.northbuilt.config-sync|$BUNDLE_ID|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|\.northbuilt|.$LOCAL_DIR|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|NorthBuilt|$ORG_NAME|g" "$CONFIG_DIR/ConfigSync.swift"
+# Use sed_escape to handle special characters in config values
+sed -i.bak "s|config.northbuilt.com|$(sed_escape "$DOMAIN")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|craftcodery/config-sync|$(sed_escape "$GITHUB_OWNER/$GITHUB_REPO")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|craftcodery.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|NorthBuilt Config Sync|$(sed_escape "$APP_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|com.northbuilt.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|\.northbuilt|.$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|NorthBuilt|$(sed_escape "$ORG_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
 rm -f "$CONFIG_DIR/ConfigSync.swift.bak"
 
 spin_process "Compiling menu bar app..." \
@@ -753,19 +779,15 @@ show_success "Menu bar app built"
 show_step "Cleaning up"
 
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-PLIST_NAME="com.northbuilt.aws-config-sync.plist"
 
-# Unload and remove old launchd service if it exists
-if [[ -f "$LAUNCHD_DIR/$PLIST_NAME" ]]; then
-    launchctl unload "$LAUNCHD_DIR/$PLIST_NAME" 2>/dev/null || true
-    rm -f "$LAUNCHD_DIR/$PLIST_NAME"
-    show_success "Migrated from launchd"
-fi
-
-# Clean up legacy service names
-for old_plist in "com.northbuilt.sync.plist" "com.northbuilt.config-sync.plist"; do
-    launchctl unload "$LAUNCHD_DIR/$old_plist" 2>/dev/null || true
-    rm -f "$LAUNCHD_DIR/$old_plist"
+# Clean up any launchd services (legacy and current bundle ID patterns)
+# This handles migration from older versions and different org configurations
+for old_plist in "$BUNDLE_ID.plist" "com.northbuilt.aws-config-sync.plist" "com.northbuilt.sync.plist" "com.northbuilt.config-sync.plist"; do
+    if [[ -f "$LAUNCHD_DIR/$old_plist" ]]; then
+        launchctl unload "$LAUNCHD_DIR/$old_plist" 2>/dev/null || true
+        rm -f "$LAUNCHD_DIR/$old_plist"
+        show_success "Removed legacy service: $old_plist"
+    fi
 done
 
 # Remove old files
