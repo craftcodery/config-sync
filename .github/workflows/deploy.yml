@@ -93,6 +93,15 @@ jobs:
             echo "Processed docs/aws/index.html"
           fi
 
+          # Process AWS readability.js.template (if exists)
+          if [[ -f docs/aws/readability.js.template ]]; then
+            cp docs/aws/readability.js.template docs/aws/readability.js
+
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/readability.js
+
+            echo "Processed docs/aws/readability.js"
+          fi
+
           # Process SSH index.html.template (if exists)
           if [[ -f docs/ssh/index.html.template ]]; then
             cp docs/ssh/index.html.template docs/ssh/index.html

@@ -30,5 +30,5 @@ window.addEventListener("load", () => {
     code +
     "</code></pre>";
   $head.innerHTML =
-    "<title>NorthBuilt Setup</title>" + content.head.join("\n");
+    "<title>{{ORG_NAME}} Setup</title>" + content.head.join("\n");
 });
