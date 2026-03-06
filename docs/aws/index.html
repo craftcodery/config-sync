@@ -398,12 +398,14 @@ show_completion() {
     echo ""
     if has_gum && [[ "$USE_COLOR" == "true" ]]; then
         # Create the celebration header with neon green on dark background
+        # Use width to extend background across full content area
         local header
         header=$(gum style \
             --foreground "$HEX_GREEN" \
             --background "$HEX_BG" \
             --bold \
             --align center \
+            --width 62 \
             "✓ Setup Complete!")
 
         # Create info sections using synthwave color scheme on dark background
