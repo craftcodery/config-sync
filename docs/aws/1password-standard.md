@@ -63,7 +63,7 @@ To get programmatic access keys:
 **Format:** `AWS - [Client/Project Name]`
 
 **Examples:**
-- `AWS - Acme Corp`
+- `AWS - Your Team`
 - `AWS - Example Client`
 - `AWS - My Company Production`
 

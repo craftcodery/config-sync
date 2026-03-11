@@ -713,13 +713,13 @@ spin_download "Downloading menu bar app..." \
 # Substitute branding values in Swift source before compiling
 # Order matters: replace longer/more specific strings first
 # Use sed_escape to handle special characters in config values
-sed -i.bak "s|config.acme.example|$(sed_escape "$DOMAIN")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|config.yourteam.example|$(sed_escape "$DOMAIN")|g" "$CONFIG_DIR/ConfigSync.swift"
 sed -i.bak "s|your-org/config-sync|$(sed_escape "$GITHUB_OWNER/$GITHUB_REPO")|g" "$CONFIG_DIR/ConfigSync.swift"
 sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|Acme Config Sync|$(sed_escape "$APP_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|com.acme.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|\.acme|.$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|Acme|$(sed_escape "$ORG_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|Your Team Config Sync|$(sed_escape "$APP_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|com.yourteam.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|\.yourteam|.$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|Your Team|$(sed_escape "$ORG_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
 rm -f "$CONFIG_DIR/ConfigSync.swift.bak"
 
 spin_process "Compiling menu bar app..." \
@@ -782,7 +782,7 @@ LAUNCHD_DIR="$HOME/Library/LaunchAgents"
 
 # Clean up any launchd services (legacy and current bundle ID patterns)
 # This handles migration from older versions and different org configurations
-for old_plist in "$BUNDLE_ID.plist" "com.acme.aws-config-sync.plist" "com.acme.sync.plist" "com.acme.config-sync.plist"; do
+for old_plist in "$BUNDLE_ID.plist" "com.yourteam.aws-config-sync.plist" "com.yourteam.sync.plist" "com.yourteam.config-sync.plist"; do
     if [[ -f "$LAUNCHD_DIR/$old_plist" ]]; then
         launchctl unload "$LAUNCHD_DIR/$old_plist" 2>/dev/null || true
         rm -f "$LAUNCHD_DIR/$old_plist"

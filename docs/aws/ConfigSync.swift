@@ -6,7 +6,7 @@ import Network
 
 // MARK: - Logger
 
-private let logger = Logger(subsystem: "com.acme.config-sync", category: "sync")
+private let logger = Logger(subsystem: "com.yourteam.config-sync", category: "sync")
 
 // MARK: - Version
 
@@ -18,9 +18,9 @@ private enum AppVersion {
 // MARK: - Configuration
 
 private enum Config {
-    static let baseURL = "https://config.acme.example/aws"
+    static let baseURL = "https://config.yourteam.example/aws"
     static let githubReleasesURL = "https://api.github.com/repos/your-org/config-sync/releases/latest"
-    static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".acme/aws")
+    static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".yourteam/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
     static let syncHour = 8 // 8:00 AM
@@ -107,7 +107,7 @@ class NetworkMonitor {
     static let shared = NetworkMonitor()
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "com.acme.config-sync.networkmonitor")
+    private let queue = DispatchQueue(label: "com.yourteam.config-sync.networkmonitor")
     private(set) var isConnected = true
 
     func start() {
@@ -462,7 +462,7 @@ class UpdateManager {
 
             // Send notification
             NotificationManager.shared.sendNotification(
-                title: "Acme Config Sync Updated",
+                title: "Your Team Config Sync Updated",
                 body: "Updated to v\(versionInfo.version). Restarting..."
             )
 
@@ -950,7 +950,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         // About
-        let aboutItem = NSMenuItem(title: "About Acme Config Sync", action: #selector(aboutClicked), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About Your Team Config Sync", action: #selector(aboutClicked), keyEquivalent: "")
         aboutItem.target = self
         statusMenu.addItem(aboutItem)
 
@@ -977,7 +977,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Send notification about update
             NotificationManager.shared.sendNotification(
-                title: "Acme Config Sync Update Available",
+                title: "Your Team Config Sync Update Available",
                 body: "Version \(info.version) is ready to install"
             )
         } else {
@@ -1005,14 +1005,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 Preferences.shared.consecutiveFailures = 0
                 if isFirstSync {
                     NotificationManager.shared.sendNotification(
-                        title: "Acme Config Sync",
+                        title: "Your Team Config Sync",
                         body: "AWS configuration synced successfully"
                     )
                 }
             } else {
                 Preferences.shared.consecutiveFailures += 1
                 NotificationManager.shared.sendNotification(
-                    title: "Acme Config Sync Failed",
+                    title: "Your Team Config Sync Failed",
                     body: result.message,
                     isError: true
                 )
@@ -1193,7 +1193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let script = """
         tell application "Terminal"
             activate
-            do script "log show --last 1h --predicate 'subsystem == \"com.acme.config-sync\"' --style compact"
+            do script "log show --last 1h --predicate 'subsystem == \"com.yourteam.config-sync\"' --style compact"
         end tell
         """
 
@@ -1240,7 +1240,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func aboutClicked() {
         let alert = NSAlert()
-        alert.messageText = "Acme Config Sync"
+        alert.messageText = "Your Team Config Sync"
         alert.informativeText = """
         Version \(AppVersion.current) (build \(AppVersion.build))
 

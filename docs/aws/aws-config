@@ -10,9 +10,9 @@
 
 # Default profile uses 1Password for credentials
 [default]
-credential_process = __HELPER_PATH__ "AWS - Acme" "Employee"
-mfa_process = __HELPER_PATH__ "AWS - Acme" "Employee" --otp
-mfa_serial = __MFA_SERIAL:AWS - Acme:Employee__
+credential_process = __HELPER_PATH__ "AWS - Your Team" "Employee"
+mfa_process = __HELPER_PATH__ "AWS - Your Team" "Employee" --otp
+mfa_serial = __MFA_SERIAL:AWS - Your Team:Employee__
 region = us-east-1
 
 # -----------------------------------------------------------------------------
@@ -20,7 +20,7 @@ region = us-east-1
 # -----------------------------------------------------------------------------
 # Once AWS IAM Identity Center is configured, uncomment and update:
 #
-# [profile acme-sso]
+# [profile yourteam-sso]
 # sso_start_url = https://your-org.awsapps.com/start
 # sso_region = us-east-1
 # sso_account_id = YOUR_ACCOUNT_ID
