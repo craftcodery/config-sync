@@ -6,7 +6,7 @@ import Network
 
 // MARK: - Logger
 
-private let logger = Logger(subsystem: "com.northbuilt.config-sync", category: "sync")
+private let logger = Logger(subsystem: "com.acme.config-sync", category: "sync")
 
 // MARK: - Version
 
@@ -18,16 +18,16 @@ private enum AppVersion {
 // MARK: - Configuration
 
 private enum Config {
-    static let baseURL = "https://config.northbuilt.com/aws"
-    static let githubReleasesURL = "https://api.github.com/repos/craftcodery/config-sync/releases/latest"
-    static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".northbuilt/aws")
+    static let baseURL = "https://config.acme.example/aws"
+    static let githubReleasesURL = "https://api.github.com/repos/your-org/config-sync/releases/latest"
+    static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".acme/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
     static let syncHour = 8 // 8:00 AM
     static let syncMinute = 0
     static let syncTimeZone = TimeZone(identifier: "America/Chicago")! // Central Time
     static let updateCheckInterval: TimeInterval = 21600 // 6 hours
-    static let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "craftcodery.1password.com"
+    static let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "your-team.1password.com"
 
     /// Calculate seconds until next scheduled sync time (8am Central)
     static func secondsUntilNextSync() -> TimeInterval {
@@ -107,7 +107,7 @@ class NetworkMonitor {
     static let shared = NetworkMonitor()
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "com.northbuilt.config-sync.networkmonitor")
+    private let queue = DispatchQueue(label: "com.acme.config-sync.networkmonitor")
     private(set) var isConnected = true
 
     func start() {
@@ -462,7 +462,7 @@ class UpdateManager {
 
             // Send notification
             NotificationManager.shared.sendNotification(
-                title: "NorthBuilt Config Sync Updated",
+                title: "Acme Config Sync Updated",
                 body: "Updated to v\(versionInfo.version). Restarting..."
             )
 
@@ -950,7 +950,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         // About
-        let aboutItem = NSMenuItem(title: "About NorthBuilt Config Sync", action: #selector(aboutClicked), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About Acme Config Sync", action: #selector(aboutClicked), keyEquivalent: "")
         aboutItem.target = self
         statusMenu.addItem(aboutItem)
 
@@ -977,7 +977,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Send notification about update
             NotificationManager.shared.sendNotification(
-                title: "NorthBuilt Config Sync Update Available",
+                title: "Acme Config Sync Update Available",
                 body: "Version \(info.version) is ready to install"
             )
         } else {
@@ -1005,14 +1005,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 Preferences.shared.consecutiveFailures = 0
                 if isFirstSync {
                     NotificationManager.shared.sendNotification(
-                        title: "NorthBuilt Config Sync",
+                        title: "Acme Config Sync",
                         body: "AWS configuration synced successfully"
                     )
                 }
             } else {
                 Preferences.shared.consecutiveFailures += 1
                 NotificationManager.shared.sendNotification(
-                    title: "NorthBuilt Config Sync Failed",
+                    title: "Acme Config Sync Failed",
                     body: result.message,
                     isError: true
                 )
@@ -1193,7 +1193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let script = """
         tell application "Terminal"
             activate
-            do script "log show --last 1h --predicate 'subsystem == \"com.northbuilt.config-sync\"' --style compact"
+            do script "log show --last 1h --predicate 'subsystem == \"com.acme.config-sync\"' --style compact"
         end tell
         """
 
@@ -1240,7 +1240,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func aboutClicked() {
         let alert = NSAlert()
-        alert.messageText = "NorthBuilt Config Sync"
+        alert.messageText = "Acme Config Sync"
         alert.informativeText = """
         Version \(AppVersion.current) (build \(AppVersion.build))
 

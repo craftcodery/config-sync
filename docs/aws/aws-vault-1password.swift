@@ -8,11 +8,11 @@ import Foundation
 //   aws-vault-1password "Item Name" "Vault Name" --validate   # Validate entry format
 //
 // Environment Variables:
-//   OP_ACCOUNT - 1Password account to use (e.g., "craftcodery.1password.com")
+//   OP_ACCOUNT - 1Password account to use (e.g., "your-team.1password.com")
 
 // MARK: - Configuration
 
-let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "craftcodery.1password.com"
+let opAccount = ProcessInfo.processInfo.environment["OP_ACCOUNT"] ?? "your-team.1password.com"
 
 // MARK: - Errors
 
@@ -299,7 +299,7 @@ func printUsage() {
       --validate  Check if entry is properly configured
 
     Environment:
-      OP_ACCOUNT  1Password account (e.g., craftcodery.1password.com)
+      OP_ACCOUNT  1Password account (e.g., your-team.1password.com)
 
     """, stderr)
 }
