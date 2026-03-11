@@ -1,19 +1,12 @@
 # Config Sync
 
-Configuration sync tools for employee workstations. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
+A template repository for employee workstation configuration management. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
 
 ![Demo](docs/aws/demo.gif)
 
-## Available Tools
+## Overview
 
-| Tool | Command | Status |
-|------|---------|--------|
-| [AWS](docs/aws/) | `curl -fsSL config.northbuilt.com/aws \| bash` | Ready |
-| [SSH](docs/ssh/) | `curl -fsSL config.northbuilt.com/ssh \| bash` | Coming soon |
-
-Or visit [config.northbuilt.com](https://config.northbuilt.com) to see all available setup scripts.
-
-## Features
+This repository provides a complete system for automatically distributing and maintaining configurations (AWS CLI, SSH, etc.) across employee MacBooks. Key features:
 
 - **Native macOS Apps**: Menu bar apps built in Swift, compiled locally
 - **Automatic Sync**: Configuration syncs daily at 8:00 AM Central
@@ -22,6 +15,75 @@ Or visit [config.northbuilt.com](https://config.northbuilt.com) to see all avail
 - **Network-Aware**: Skips sync when offline, resumes when connected
 - **Notifications**: Alerts for sync failures and available updates
 - **Launch at Login**: Optional automatic startup
+
+## Available Tools
+
+| Tool | Status |
+|------|--------|
+| [AWS](docs/aws/) | Ready |
+| [SSH](docs/ssh/) | Coming soon |
+
+## Getting Started
+
+This is a **template repository**. To use it for your organization:
+
+### 1. Create Your Repository
+
+Fork or use this repository as a template to create your own copy.
+
+### 2. Update Branding
+
+Edit `docs/config.json` with your organization's values:
+
+```json
+{
+  "branding": {
+    "orgName": "YourCompany",
+    "appName": "YourCompany Config Sync",
+    "appNameShort": "Config Sync",
+    "bundleId": "com.yourcompany.config-sync",
+    "domain": "config.yourcompany.com",
+    "localDir": ".yourcompany",
+    "tagline": "AWS Config Sync • Powered by 1Password",
+    "asciiLogo": [
+      "Line 1 of your ASCII art...",
+      "Line 2...",
+      "..."
+    ]
+  },
+  "github": {
+    "owner": "your-github-org",
+    "repo": "your-repo-name"
+  },
+  "onepassword": {
+    "account": "yourcompany.1password.com"
+  }
+}
+```
+
+### 3. Update Domain
+
+Edit `docs/CNAME` with your custom domain:
+```
+config.yourcompany.com
+```
+
+### 4. Configure AWS Profiles
+
+Edit `docs/aws/aws-config` with your AWS profiles and 1Password item references.
+
+### 5. Set Up GitHub Pages
+
+In your repository Settings → Pages:
+- Source: **GitHub Actions** (not "Deploy from branch")
+- Custom domain: `config.yourcompany.com`
+
+### 6. Configure DNS
+
+Point your domain to GitHub Pages:
+```
+config.yourcompany.com  CNAME  your-github-org.github.io
+```
 
 ## Prerequisites
 
@@ -33,8 +95,6 @@ All setup scripts require:
    - Enable "Integrate with 1Password CLI"
 3. **Automation permission for 1Password** (one-time approval):
    - When you see "op would like to access data from other apps", click **Allow**
-   - This grants permission to the sync app (`NorthBuilt Config Sync`) - the choice persists
-   - If you clicked "Don't Allow", go to System Settings → Privacy & Security → Automation and enable the toggle for "1Password" under "NorthBuilt Config Sync"
 
 ## How It Works
 
@@ -63,7 +123,7 @@ Each tool follows the same pattern:
 ## Repository Structure
 
 ```
-docs/                           # Served via GitHub Pages at config.northbuilt.com
+docs/                           # Served via GitHub Pages
 ├── index.html                  # Landing page
 ├── CNAME                       # Custom domain config
 ├── config.json                 # Centralized branding configuration (single source of truth)
@@ -78,123 +138,39 @@ docs/                           # Served via GitHub Pages at config.northbuilt.c
 └── release.yml                 # Auto-creates releases when source files change
 ```
 
-## Security
+## Template Processing
 
-See [SECURITY.md](SECURITY.md) for:
-
-- Branch protection setup (required: 2+ approvers)
-- Trust model and incident response
-- Self-update security considerations
-
-## For Administrators
-
-See individual tool READMEs for administration guides:
-
-- [AWS Configuration](docs/aws/README.md)
-- [SSH Configuration](docs/ssh/README.md) *(coming soon)*
-
-### Releasing Updates
-
-1. Make changes to Swift source files
-2. Commit with descriptive message (this becomes release notes)
-   - Use `[minor]` or `[major]` tags in commit message for larger bumps
-   - Normal commits trigger patch version bumps
-3. Push to main (requires 2+ approvals)
-4. GitHub Actions automatically creates a release with version tag
-5. Users receive update notification within 6 hours
-
-## Using This Template for Your Organization
-
-This repository is designed to be easily adapted for other organizations. All branding is centralized in `config.json` — GitHub Actions automatically injects these values into setup scripts during deployment.
-
-### Quick Start
-
-1. **Fork or use as template** — Create your own copy of this repository
-
-2. **Update `docs/config.json`** — Change all branding values:
-   ```json
-   {
-     "branding": {
-       "orgName": "YourCompany",
-       "appName": "YourCompany Config Sync",
-       "appNameShort": "Config Sync",
-       "bundleId": "com.yourcompany.config-sync",
-       "domain": "config.yourcompany.com",
-       "localDir": ".yourcompany",
-       "tagline": "AWS Config Sync • Powered by 1Password",
-       "asciiLogo": [
-         "Line 1 of your ASCII art...",
-         "Line 2...",
-         "..."
-       ]
-     },
-     "github": {
-       "owner": "your-github-org",
-       "repo": "your-repo-name"
-     },
-     "onepassword": {
-       "account": "yourcompany.1password.com"
-     }
-   }
-   ```
-
-3. **Update `docs/CNAME`** — Set your custom domain:
-   ```
-   config.yourcompany.com
-   ```
-
-4. **Update `docs/aws/aws-config`** — Replace with your AWS profiles and 1Password item references
-
-5. **Configure GitHub Pages** — In repository Settings → Pages:
-   - Source: **GitHub Actions** (not "Deploy from branch")
-   - Custom domain: `config.yourcompany.com`
-
-6. **Configure DNS** — Point your domain to GitHub Pages:
-   ```
-   config.yourcompany.com  CNAME  your-github-org.github.io
-   ```
-
-### How Template Processing Works
-
-GitHub Actions (`deploy.yml`) processes templates before deployment:
+GitHub Actions (`deploy.yml`) automatically processes templates before deployment:
 
 1. Reads `config.json` for all branding values
 2. Replaces `{{PLACEHOLDER}}` tokens in `*.template` files
-3. Generates final `index.html` files
+3. Generates final HTML files
 4. Deploys to GitHub Pages
 
 This means you only need to edit `config.json` — the setup scripts are automatically branded for your organization.
 
-### What Gets Auto-Configured
+### Placeholders
 
-These placeholders are replaced in both the setup scripts (at deploy time) and Swift source (at install time):
-
-| Placeholder | Source | Replaced with |
-|------------|--------|---------------|
+| Placeholder | Source | Description |
+|-------------|--------|-------------|
 | `{{ORG_NAME}}` | `config.json` | Your organization name |
 | `{{DOMAIN}}` | `config.json` | Your domain |
 | `{{GITHUB_OWNER}}` | `config.json` | Your GitHub org |
 | `{{GITHUB_REPO}}` | `config.json` | Your repo name |
-| `{{ASCII_LOGO_LINE_XX}}` | `config.json` | Your ASCII art logo |
+| `{{ASCII_LOGO_LINE_XX}}` | `config.json` | Your ASCII art logo (lines 01-12) |
 | `{{TAGLINE}}` | `config.json` | Your tagline |
 
-Swift source files use NorthBuilt values as template markers, which are replaced with your config values during user installation via sed.
-
-### Files to Customize
+## Files to Customize
 
 | File | What to change |
 |------|----------------|
 | `docs/config.json` | All branding values including ASCII logo (required) |
 | `docs/CNAME` | Your custom domain (required) |
 | `docs/aws/aws-config` | Your AWS profiles and 1Password items |
-| `docs/index.html` | Landing page title and description |
-| `docs/aws/README.md` | Documentation for your users |
-| `README.md` | This file - update for your org |
-| `SECURITY.md` | Security documentation |
 | `docs/aws/AppIcon.icns` | Your app icon |
 | `docs/aws/MenuBarIcon.png` | Your menu bar icon |
 
-### Creating Your ASCII Logo
+## Creating Your ASCII Logo
 
 1. Go to [patorjk.com/software/taag](https://patorjk.com/software/taag/)
 2. Enter your organization name
@@ -202,9 +178,26 @@ Swift source files use NorthBuilt values as template markers, which are replaced
 4. Copy each line into the `asciiLogo` array in `config.json`
 5. The logo should be 12 lines (pad with empty strings if needed)
 
-### Architecture Notes
+## Releasing Updates
 
-- **Template processing** — GitHub Actions injects branding before deployment
-- **Compile from source** — Swift files are downloaded and compiled on each user's machine
-- **GitHub Releases** — Auto-updates fetch new versions from GitHub Releases API
-- **1Password integration** — Credentials are never stored; fetched on-demand via `op` CLI
+1. Make changes to Swift source files
+2. Commit with descriptive message (this becomes release notes)
+   - Use `[minor]` or `[major]` tags in commit message for larger bumps
+   - Normal commits trigger patch version bumps
+3. Push to main
+4. GitHub Actions automatically creates a release with version tag
+5. Users receive update notification within 6 hours
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for:
+
+- Branch protection setup
+- Trust model and incident response
+- Self-update security considerations
+
+## Documentation
+
+- [AWS Configuration](docs/aws/README.md)
+- [SSH Configuration](docs/ssh/README.md) *(coming soon)*
+- [1Password Credential Standard](docs/aws/1password-standard.md)

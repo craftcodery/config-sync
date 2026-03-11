@@ -79,24 +79,18 @@ logo=$(gum style \
     --border-foreground "$HEX_PURPLE" \
     --padding "0 2" \
     --bold \
-    "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗" \
-    "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║" \
-    "██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║" \
-    "██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║" \
-    "██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║" \
-    "╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝" \
-    "██████╗ ██╗   ██╗██╗██╗  ████████╗          " \
-    "██╔══██╗██║   ██║██║██║  ╚══██╔══╝          " \
-    "██████╔╝██║   ██║██║██║     ██║             " \
-    "██╔══██╗██║   ██║██║██║     ██║             " \
-    "██████╔╝╚██████╔╝██║███████╗██║             " \
-    "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             ")
+    " █████╗  ██████╗███╗   ███╗███████╗" \
+    "██╔══██╗██╔════╝████╗ ████║██╔════╝" \
+    "███████║██║     ██╔████╔██║█████╗  " \
+    "██╔══██║██║     ██║╚██╔╝██║██╔══╝  " \
+    "██║  ██║╚██████╗██║ ╚═╝ ██║███████╗" \
+    "╚═╝  ╚═╝ ╚═════╝╚═╝     ╚═╝╚══════╝")
 
 tagline=$(gum style \
     --foreground "$HEX_CYAN" \
     --italic \
     --padding "0 2" \
-    "NorthBuilt Config Sync")
+    "Config Sync")
 
 echo ""
 gum join --vertical --align center "$logo" "$tagline"
@@ -202,19 +196,19 @@ header=$(gum style \
 info=$(gum style \
     --foreground "$HEX_WHITE" \
     --padding "0 0" \
-    "Look for the NorthBuilt icon in your menu bar." \
+    "Look for the Config Sync icon in your menu bar." \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Test your AWS access:")" \
     "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls")" \
     "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Use a client profile:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile donatefordough")" \
+    "$(gum style --foreground "$HEX_PINK" --bold "Use a different profile:")" \
+    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile some-client")" \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
     "  $(gum style --foreground "$HEX_GRAY" "Daily at 8:00 AM Central, or click icon to sync now")" \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "Click NorthBuilt icon → Launch at Login")")
+    "  $(gum style --foreground "$HEX_GRAY" "Click menu bar icon → Launch at Login")")
 
 content=$(gum join --vertical --align center "$header" "$info")
 

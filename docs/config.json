@@ -1,32 +1,32 @@
 {
   "branding": {
-    "orgName": "NorthBuilt",
-    "appName": "NorthBuilt Config Sync",
+    "orgName": "Acme",
+    "appName": "Acme Config Sync",
     "appNameShort": "Config Sync",
-    "bundleId": "com.northbuilt.config-sync",
-    "domain": "config.northbuilt.com",
-    "localDir": ".northbuilt",
+    "bundleId": "com.acme.config-sync",
+    "domain": "config.acme.example",
+    "localDir": ".acme",
     "tagline": "AWS Config Sync • Powered by 1Password",
     "asciiLogo": [
-      "███╗   ██╗ ██████╗ ██████╗ ████████╗██╗  ██╗",
-      "████╗  ██║██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║",
-      "██╔██╗ ██║██║   ██║██████╔╝   ██║   ███████║",
-      "██║╚██╗██║██║   ██║██╔══██╗   ██║   ██╔══██║",
-      "██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║  ██║",
-      "╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝",
-      "██████╗ ██╗   ██╗██╗██╗  ████████╗          ",
-      "██╔══██╗██║   ██║██║██║  ╚══██╔══╝          ",
-      "██████╔╝██║   ██║██║██║     ██║             ",
-      "██╔══██╗██║   ██║██║██║     ██║             ",
-      "██████╔╝╚██████╔╝██║███████╗██║             ",
-      "╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝             "
+      " █████╗  ██████╗███╗   ███╗███████╗",
+      "██╔══██╗██╔════╝████╗ ████║██╔════╝",
+      "███████║██║     ██╔████╔██║█████╗  ",
+      "██╔══██║██║     ██║╚██╔╝██║██╔══╝  ",
+      "██║  ██║╚██████╗██║ ╚═╝ ██║███████╗",
+      "╚═╝  ╚═╝ ╚═════╝╚═╝     ╚═╝╚══════╝",
+      "                                   ",
+      "                                   ",
+      "                                   ",
+      "                                   ",
+      "                                   ",
+      "                                   "
     ]
   },
   "github": {
-    "owner": "craftcodery",
+    "owner": "your-org",
     "repo": "config-sync"
   },
   "onepassword": {
-    "account": "craftcodery.1password.com"
+    "account": "your-team.1password.com"
   }
 }

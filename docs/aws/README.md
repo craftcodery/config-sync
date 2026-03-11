@@ -7,7 +7,7 @@ Sets up AWS CLI on employee MacBooks with automatic 1Password credential integra
 ## Quick Start
 
 ```bash
-curl -fsSL config.northbuilt.com/aws | bash
+curl -fsSL config.your-domain.com/aws | bash
 ```
 
 ## Prerequisites
@@ -25,29 +25,22 @@ curl -fsSL config.northbuilt.com/aws | bash
 Once setup is complete, AWS commands just work:
 
 ```bash
-# Default profile (NorthBuilt)
+# Default profile
 aws s3 ls
 
-# Client profiles
-aws s3 ls --profile donatefordough
-aws s3 ls --profile retina
-aws s3 ls --profile act
+# Other profiles (as configured in aws-config)
+aws s3 ls --profile some-client
 ```
 
 Credentials are fetched automatically from 1Password. MFA codes are retrieved automatically when needed.
 
 ## Available Profiles
 
-| Profile | Client | Vault |
-|---------|--------|-------|
-| `default` / `northbuilt` | NorthBuilt | Employee |
-| `donatefordough` | Donate For Dough | Donate For Dough |
-| `retina` | Retina Consultants | Retina Consultants of Minnesota |
-| `act` | ACT (Regenatrak) | Regenatrak |
+Profiles are defined in the `aws-config` file. See that file for the current list of configured profiles.
 
 ## Menu Bar App
 
-After setup, the NorthBuilt icon appears in your menu bar:
+After setup, the Config Sync icon appears in your menu bar:
 
 ```
 ┌─────────────────────────────────┐
@@ -64,7 +57,7 @@ After setup, the NorthBuilt icon appears in your menu bar:
 │ Notifications             ✓     │
 │ Launch at Login           ✓     │
 ├─────────────────────────────────┤
-│ About NorthBuilt Config Sync    │
+│ About Config Sync               │
 │ Quit                      ⌘Q    │
 └─────────────────────────────────┘
 ```
@@ -102,11 +95,11 @@ After setup, the NorthBuilt icon appears in your menu bar:
 View sync logs via the menu bar app (View Logs...) or manually:
 
 ```bash
-# Last hour of logs
-log show --predicate 'subsystem == "com.northbuilt.config-sync"' --last 1h --style compact
+# Last hour of logs (update subsystem to match your bundleId)
+log show --predicate 'subsystem == "com.your-org.config-sync"' --last 1h --style compact
 
 # Stream live logs
-log stream --predicate 'subsystem == "com.northbuilt.config-sync"'
+log stream --predicate 'subsystem == "com.your-org.config-sync"'
 ```
 
 ## How It Works
@@ -114,7 +107,7 @@ log stream --predicate 'subsystem == "com.northbuilt.config-sync"'
 ### Initial Setup
 
 ```bash
-curl -fsSL config.northbuilt.com/aws | bash
+curl -fsSL config.your-domain.com/aws | bash
 ```
 
 1. Installs Homebrew (if needed)
@@ -143,7 +136,7 @@ aws s3 ls
     ↓
 AWS CLI reads ~/.aws/config
     ↓
-credential_process = ~/.northbuilt/aws/aws-vault-1password "Item" "Vault"
+credential_process = ~/.your-dir/aws/aws-vault-1password "Item" "Vault"
     ↓
 Helper calls: op item get "Item" --vault "Vault" --format json
     ↓
@@ -189,7 +182,7 @@ GitHub Releases (auto-created on push)
     ├── AppIcon.icns
     └── MenuBarIcon.png
 
-~/.northbuilt/aws/ (on employee machines)
+~/.your-dir/aws/ (on employee machines)
 ├── ConfigSync.app/             # Menu bar app bundle
 │   └── Contents/
 │       ├── MacOS/ConfigSync       # Compiled binary
@@ -204,7 +197,7 @@ GitHub Releases (auto-created on push)
 
 ## For Administrators
 
-### Adding a New Client Profile
+### Adding a New Profile
 
 1. **Create 1Password entry** in the appropriate vault:
    - Item name: `AWS - Client Name`
@@ -283,7 +276,7 @@ Check the 1Password entry has the correct field labels:
 
 Run validation:
 ```bash
-~/.northbuilt/aws/aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
+~/.your-dir/aws/aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
 ```
 
 ### MFA not working
@@ -302,7 +295,7 @@ This macOS prompt appears when 1Password CLI first communicates with the 1Passwo
 
 If you clicked "Don't Allow":
 1. Go to System Settings → Privacy & Security → Automation
-2. Find "NorthBuilt Config Sync" and enable the toggle for "1Password"
+2. Find "Config Sync" and enable the toggle for "1Password"
 
 **For terminal usage:**
 1. Click **Allow** when prompted
@@ -311,8 +304,8 @@ If you clicked "Don't Allow":
 ### Menu bar icon not showing
 
 1. Check if the app is running: `pgrep -f ConfigSync`
-2. If not running, launch it: `open ~/.northbuilt/aws/ConfigSync.app`
-3. On MacBooks with notch: Cmd-drag menu bar icons to reorder (move NorthBuilt left)
+2. If not running, launch it: `open ~/.your-dir/aws/ConfigSync.app`
+3. On MacBooks with notch: Cmd-drag menu bar icons to reorder (move icon left)
 4. Check logs: View Logs... from another menu bar app or Terminal
 
 ### Sync fails with "1Password may be locked"
@@ -338,25 +331,18 @@ The app detected no network connectivity. It will automatically retry when conne
 
 ### From Previous Bash-Based System
 
-1. Re-run the setup script: `curl -fsSL config.northbuilt.com/aws | bash`
+1. Re-run the setup script
 2. The script automatically removes the old launchd service
 3. The menu bar app replaces the background sync service
-
-### From NorthBuiltSync to ConfigSync
-
-The app was renamed for broader compatibility. Re-running setup will:
-1. Remove old `NorthBuiltSync.app`
-2. Install new `ConfigSync.app`
-3. Preserve your settings
 
 ## Uninstalling
 
 ```bash
 # Quit the menu bar app
-osascript -e 'quit app "NorthBuilt Config Sync"'
+osascript -e 'quit app "Config Sync"'
 
 # Remove the app and config
-rm -rf ~/.northbuilt/aws
+rm -rf ~/.your-dir/aws
 
 # Optionally remove AWS config
 rm -f ~/.aws/config

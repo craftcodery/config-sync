@@ -64,8 +64,8 @@ To get programmatic access keys:
 
 **Examples:**
 - `AWS - Acme Corp`
-- `AWS - Donate For Dough`
-- `AWS - NorthBuilt Production`
+- `AWS - Example Client`
+- `AWS - My Company Production`
 
 ## AWS Config Integration
 
@@ -81,7 +81,7 @@ region = us-east-1
 [profile client-name]
 credential_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name"
 mfa_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name" --otp
-mfa_serial = arn:aws:iam::123456789012:mfa/northbuilt-support
+mfa_serial = arn:aws:iam::123456789012:mfa/username
 region = us-east-1
 ```
 

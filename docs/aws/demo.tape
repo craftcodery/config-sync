@@ -1,4 +1,4 @@
-# VHS Demo for NorthBuilt AWS Config Sync
+# VHS Demo for Config Sync
 # https://github.com/charmbracelet/vhs
 # Regenerate with: vhs demo.tape
 
@@ -43,7 +43,7 @@ Show
 Sleep 100ms
 
 # Type the install command (purely visual - never actually executed)
-Type "curl -fsSL config.northbuilt.com/aws | bash"
+Type "curl -fsSL config.your-domain.com/aws | bash"
 Sleep 500ms
 Enter
 
