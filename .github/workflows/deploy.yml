@@ -36,6 +36,7 @@ jobs:
           DOMAIN=$(echo "$CONFIG" | jq -r '.branding.domain')
           LOCAL_DIR=$(echo "$CONFIG" | jq -r '.branding.localDir')
           TAGLINE=$(echo "$CONFIG" | jq -r '.branding.tagline')
+          OP_ACCOUNT=$(echo "$CONFIG" | jq -r '.onepassword.account')
 
           # Extract GitHub values
           GITHUB_OWNER=$(echo "$CONFIG" | jq -r '.github.owner')
@@ -71,8 +72,9 @@ jobs:
             sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/index.html
             sed -i "s|{{BUNDLE_ID}}|$BUNDLE_ID|g" docs/aws/index.html
             sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/aws/index.html
-            sed -i "s|{{LOCAL_DIR}}|$LOCAL_DIR|g" docs/aws/index.html
+            sed -i "s|{{LOCAL_DIR}}|.$LOCAL_DIR|g" docs/aws/index.html
             sed -i "s|{{TAGLINE}}|$TAGLINE|g" docs/aws/index.html
+            sed -i "s|{{OP_ACCOUNT}}|$OP_ACCOUNT|g" docs/aws/index.html
             sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/aws/index.html
             sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/aws/index.html
 

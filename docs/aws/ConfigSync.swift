@@ -18,8 +18,11 @@ private enum AppVersion {
 // MARK: - Configuration
 
 private enum Config {
-    static let baseURL = "https://config.yourteam.example/aws"
-    static let githubReleasesURL = "https://api.github.com/repos/your-org/config-sync/releases/latest"
+    // GitHub repo coordinates (private repo - uses gh api)
+    static let githubOwner = "your-org"
+    static let githubRepo = "config-sync"
+    static let githubPathPrefix = "docs"
+    static let githubReleasesURL = "https://api.github.com/repos/\(githubOwner)/\(githubRepo)/releases/latest"
     static let configDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".yourteam/aws")
     static let awsConfigPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".aws/config")
     static let helperName = "aws-vault-1password"
@@ -674,7 +677,7 @@ actor SyncEngine {
 
             let helperPath = Config.configDir.appendingPathComponent(Config.helperName)
 
-            let configTemplate = try await downloadString(from: "\(Config.baseURL)/aws-config")
+            let configTemplate = try await downloadFromGitHub(filePath: "aws/aws-config")
             logger.notice("Downloaded aws-config template")
 
             let suspiciousPatterns = ["curl ", "wget ", "/bin/sh", "/bin/bash", "&&", "||", "; "]
@@ -770,23 +773,50 @@ actor SyncEngine {
         }
     }
 
-    private func downloadString(from urlString: String) async throws -> String {
-        guard let url = URL(string: urlString) else {
-            throw SyncError.downloadFailed(urlString)
+    /// Download file from private GitHub repo using gh api
+    /// - Parameter filePath: Path relative to docs/ directory (e.g., "aws/aws-config")
+    private func downloadFromGitHub(filePath: String) async throws -> String {
+        let apiPath = "repos/\(Config.githubOwner)/\(Config.githubRepo)/contents/\(Config.githubPathPrefix)/\(filePath)"
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let process = Process()
+            let pipe = Pipe()
+            let errorPipe = Pipe()
+
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [
+                "gh", "api", apiPath,
+                "-H", "Accept: application/vnd.github.raw"
+            ]
+            process.standardOutput = pipe
+            process.standardError = errorPipe
+
+            process.terminationHandler = { proc in
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+                if proc.terminationStatus != 0 {
+                    let errorMessage = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                    logger.error("gh api failed: \(errorMessage)")
+                    continuation.resume(throwing: SyncError.downloadFailed(filePath))
+                    return
+                }
+
+                guard let content = String(data: data, encoding: .utf8) else {
+                    continuation.resume(throwing: SyncError.downloadFailed(filePath))
+                    return
+                }
+
+                continuation.resume(returning: content)
+            }
+
+            do {
+                try process.run()
+            } catch {
+                logger.error("Failed to launch gh: \(error.localizedDescription)")
+                continuation.resume(throwing: SyncError.downloadFailed(filePath))
+            }
         }
-
-        let (data, response) = try await URLSession.shared.data(from: url)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw SyncError.downloadFailed(urlString)
-        }
-
-        guard let string = String(data: data, encoding: .utf8) else {
-            throw SyncError.downloadFailed(urlString)
-        }
-
-        return string
     }
 }
 

@@ -10,6 +10,7 @@ on:
       - 'docs/aws/MenuBarIcon.png'
       - 'docs/aws/aws-config'
       - 'docs/aws/index.html.template'
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   release:
@@ -46,13 +47,19 @@ jobs:
 
       - name: Determine version bump
         id: bump
+        env:
+          COMMIT_MSG_EVENT: ${{ github.event.head_commit.message }}
         run: |
           MAJOR=${{ steps.get_version.outputs.major }}
           MINOR=${{ steps.get_version.outputs.minor }}
           PATCH=${{ steps.get_version.outputs.patch }}
 
-          # Get commit message
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          # Get commit message (from event or git log for manual triggers)
+          if [ -n "$COMMIT_MSG_EVENT" ]; then
+            COMMIT_MSG="$COMMIT_MSG_EVENT"
+          else
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+          fi
 
           # Determine bump type from commit message
           if echo "$COMMIT_MSG" | grep -qi '\[major\]'; then
@@ -92,8 +99,15 @@ jobs:
 
       - name: Generate release notes
         id: notes
+        env:
+          COMMIT_MSG_EVENT: ${{ github.event.head_commit.message }}
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          # Get commit message (from event or git log for manual triggers)
+          if [ -n "$COMMIT_MSG_EVENT" ]; then
+            COMMIT_MSG="$COMMIT_MSG_EVENT"
+          else
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+          fi
 
           # Remove version bump tags from commit message for cleaner release notes
           CLEAN_MSG=$(echo "$COMMIT_MSG" | sed 's/\[major\]//gi; s/\[minor\]//gi; s/\[patch\]//gi' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')

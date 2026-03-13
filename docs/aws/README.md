@@ -10,13 +10,17 @@ Sets up AWS CLI on employee MacBooks with automatic 1Password credential integra
 curl -fsSL config.your-domain.com/aws | bash
 ```
 
+The script will prompt you to authenticate with GitHub if needed (to access private config files).
+
 ## Prerequisites
 
-1. **1Password desktop app installed**
-2. **1Password CLI integration enabled:**
+1. **GitHub account with access to your-org/config-sync**
+   - The script will install GitHub CLI and prompt you to authenticate
+2. **1Password desktop app installed**
+3. **1Password CLI integration enabled:**
    - Open 1Password → Settings → Developer
    - Enable "Integrate with 1Password CLI"
-3. **Full Disk Access for Terminal** (for initial setup):
+4. **Full Disk Access for Terminal** (for initial setup):
    - System Settings → Privacy & Security → Full Disk Access
    - Add your terminal app (Terminal, iTerm, etc.)
 
