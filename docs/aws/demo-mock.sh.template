@@ -98,13 +98,6 @@ spin_process() {
     gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "$title" -- "$@"
 }
 
-spin_download() {
-    local title="$1"
-    shift
-    # Use 'points' instead of 'globe' - globe uses emoji that don't animate well in VHS
-    gum spin --spinner points --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
-}
-
 spin_system() {
     local title="$1"
     shift
@@ -202,15 +195,15 @@ show_success "PATH already configured"
 
 # Step 6: Build native apps
 show_step "Building native apps"
-spin_download "Downloading credential helper..." sleep 0.4
+spin_process "Downloading credential helper..." sleep 0.4
 show_success "Downloaded credential helper"
 spin_process "Compiling credential helper..." sleep 0.6
 show_success "Compiled credential helper"
-spin_download "Downloading menu bar app..." sleep 0.4
+spin_process "Downloading menu bar app..." sleep 0.4
 show_success "Downloaded menu bar app"
 spin_process "Compiling menu bar app..." sleep 0.8
 show_success "Compiled menu bar app"
-spin_download "Downloading icons..." sleep 0.3
+spin_process "Downloading icons..." sleep 0.3
 show_success "Downloaded icons"
 spin_process "Creating app bundle..." sleep 0.3
 show_success "Created app bundle"
