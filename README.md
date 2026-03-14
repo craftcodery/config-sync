@@ -2,7 +2,8 @@
 
 A template repository for employee workstation configuration management. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
 
-![Demo](docs/aws/demo.gif)
+<!-- Update this URL after configuring your domain in config.json -->
+![Demo](https://config.yourteam.example/aws/demo.gif)
 
 ## Overview
 
@@ -134,8 +135,7 @@ docs/                           # Served via GitHub Pages
     └── *.icns, *.png           # App and menu bar icons
 
 .github/workflows/
-├── deploy.yml                  # Processes templates and deploys to GitHub Pages
-└── release.yml                 # Auto-creates releases when source files change
+└── deploy.yml                  # Processes templates, generates demo, deploys to GitHub Pages
 ```
 
 ## Template Processing
@@ -181,12 +181,10 @@ This means you only need to edit `config.json` — the setup scripts are automat
 ## Releasing Updates
 
 1. Make changes to Swift source files
-2. Commit with descriptive message (this becomes release notes)
-   - Use `[minor]` or `[major]` tags in commit message for larger bumps
-   - Normal commits trigger patch version bumps
+2. Commit with descriptive message
 3. Push to main
-4. GitHub Actions automatically creates a release with version tag
-5. Users receive update notification within 6 hours
+4. GitHub Actions deploys updated files to GitHub Pages
+5. Users receive update notification within 6 hours (apps check for source changes via `gh api`)
 
 ## Security
 
