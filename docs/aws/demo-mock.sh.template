@@ -16,103 +16,48 @@ HEX_BG="#1a1a2e"
 CURRENT_STEP=0
 TOTAL_STEPS=8
 
-# Terminal dimensions
-TERM_LINES=$(tput lines)
-TERM_COLS=$(tput cols)
-PROGRESS_LINE=$((TERM_LINES - 1))  # Last line of terminal
+# Display the ASCII art logo with synthwave styling
+show_logo() {
+    echo ""
+    local logo
+    logo=$(gum style \
+        --foreground "$HEX_PINK" \
+        --background "$HEX_BG" \
+        --border double \
+        --border-foreground "$HEX_PURPLE" \
+        --padding "1 3" \
+        --width 50 \
+        --bold \
+        "{{ASCII_LOGO_LINE_01}}" \
+        "{{ASCII_LOGO_LINE_02}}" \
+        "{{ASCII_LOGO_LINE_03}}" \
+        "{{ASCII_LOGO_LINE_04}}" \
+        "{{ASCII_LOGO_LINE_05}}" \
+        "{{ASCII_LOGO_LINE_06}}" \
+        "{{ASCII_LOGO_LINE_07}}" \
+        "{{ASCII_LOGO_LINE_08}}" \
+        "{{ASCII_LOGO_LINE_09}}" \
+        "{{ASCII_LOGO_LINE_10}}" \
+        "{{ASCII_LOGO_LINE_11}}" \
+        "{{ASCII_LOGO_LINE_12}}")
 
-# Setup scroll region (excludes bottom line for progress bar)
-setup_scroll_region() {
-    # Set scroll region from line 0 to TERM_LINES-2 (leaving last line for progress)
-    printf '\033[0;%dr' $((TERM_LINES - 1))
-    # Move cursor to top of scroll region
-    tput cup 0 0
+    local tagline
+    tagline=$(gum style \
+        --foreground "$HEX_CYAN" \
+        --italic \
+        --padding "0 2" \
+        "{{TAGLINE}}")
+
+    gum join --vertical --align center "$logo" "$tagline"
+    echo ""
 }
 
-# Reset scroll region to full terminal
-reset_scroll_region() {
-    printf '\033[r'
-}
-
-# Draw progress bar at fixed bottom position (no flicker - direct overwrite)
-draw_progress() {
-    local progress=$((CURRENT_STEP * 100 / TOTAL_STEPS))
-    local bar_width=30
-    local filled=$((progress * bar_width / 100))
-    local empty=$((bar_width - filled))
-    local bar=""
-    for ((i=0; i<filled; i++)); do bar+="█"; done
-    for ((i=0; i<empty; i++)); do bar+="░"; done
-
-    # Save cursor, move to bottom line, draw, restore cursor
-    tput sc
-    tput cup $PROGRESS_LINE 0
-    # Build the entire line and print at once (reduces flicker)
-    local status_text
-    status_text=$(printf "  %s %3d%%  ─  Step %d of %d" "$bar" "$progress" "$CURRENT_STEP" "$TOTAL_STEPS")
-    # Pad to full width to overwrite any previous content
-    printf '\033[38;2;1;205;254m%s%*s\033[0m' "$status_text" $((TERM_COLS - ${#status_text})) ""
-    tput rc
-}
-
-# Initialize display with scroll region and bottom progress bar
-init_display() {
-    clear
-    setup_scroll_region
-    draw_progress
-}
-
-# Cleanup on exit
-cleanup() {
-    reset_scroll_region
-}
-trap cleanup EXIT
-
-# Initialize
-init_display
-
-# Main logo block with synthwave neon pink
-logo=$(gum style \
-    --foreground "$HEX_PINK" \
-    --background "$HEX_BG" \
-    --border double \
-    --border-foreground "$HEX_PURPLE" \
-    --padding "0 2" \
-    --bold \
-    "{{ASCII_LOGO_LINE_01}}" \
-    "{{ASCII_LOGO_LINE_02}}" \
-    "{{ASCII_LOGO_LINE_03}}" \
-    "{{ASCII_LOGO_LINE_04}}" \
-    "{{ASCII_LOGO_LINE_05}}" \
-    "{{ASCII_LOGO_LINE_06}}" \
-    "{{ASCII_LOGO_LINE_07}}" \
-    "{{ASCII_LOGO_LINE_08}}" \
-    "{{ASCII_LOGO_LINE_09}}" \
-    "{{ASCII_LOGO_LINE_10}}" \
-    "{{ASCII_LOGO_LINE_11}}" \
-    "{{ASCII_LOGO_LINE_12}}")
-
-tagline=$(gum style \
-    --foreground "$HEX_CYAN" \
-    --italic \
-    --padding "0 2" \
-    "{{APP_NAME_SHORT}}")
-
-echo ""
-gum join --vertical --align center "$logo" "$tagline"
-echo ""
-
-sleep 0.8
-
-# Helper functions
+# Display a step header with progress indicator
 show_step() {
     local title="$1"
     ((CURRENT_STEP++))
-    draw_progress
 
     echo ""
-
-    # Step badge with synthwave purple background
     local badge
     badge=$(gum style \
         --foreground "$HEX_WHITE" \
@@ -121,7 +66,6 @@ show_step() {
         --bold \
         "STEP $CURRENT_STEP/$TOTAL_STEPS")
 
-    # Title with pink accent
     local step_title
     step_title=$(gum style \
         --foreground "$HEX_PINK" \
@@ -132,103 +76,156 @@ show_step() {
     gum join --horizontal --align center "$badge" "$step_title"
 }
 
+# Display a success message
 show_success() {
     gum style --foreground "$HEX_GREEN" --margin "0 1" "✓ $1"
 }
 
+# Spinners matching the real script
+spin_install() {
+    local title="$1"
+    shift
+    gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "$title" -- "$@"
+}
+
+spin_process() {
+    local title="$1"
+    shift
+    gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "$title" -- "$@"
+}
+
+spin_download() {
+    local title="$1"
+    shift
+    gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
+}
+
+spin_system() {
+    local title="$1"
+    shift
+    gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "$title" -- "$@"
+}
+
+# Display completion banner (matches real script)
+show_completion() {
+    echo ""
+    local w=44
+
+    local header
+    header=$(gum style \
+        --foreground "$HEX_GREEN" \
+        --background "$HEX_BG" \
+        --bold \
+        --align center \
+        --width $w \
+        "✓ Setup Complete!")
+
+    local info
+    info=$(gum style \
+        --foreground "$HEX_WHITE" \
+        --background "$HEX_BG" \
+        --width $w \
+        --padding "1 0" \
+        "  Look for the {{ORG_NAME}} icon in your menu bar." \
+        "" \
+        "$(gum style --foreground "$HEX_PINK" --background "$HEX_BG" --width $w --bold "  Use your {{ORG_NAME}} profile:")" \
+        "$(gum style --foreground "$HEX_WHITE" --background "$HEX_BG" --width $w "    aws s3 ls")" \
+        "" \
+        "$(gum style --foreground "$HEX_PINK" --background "$HEX_BG" --width $w --bold "  Use a client profile:")" \
+        "$(gum style --foreground "$HEX_WHITE" --background "$HEX_BG" --width $w "    aws s3 ls --profile <client>")")
+
+    local content
+    content=$(gum join --vertical --align center "$header" "$info")
+
+    gum style \
+        --background "$HEX_BG" \
+        --border double \
+        --border-foreground "$HEX_PURPLE" \
+        --padding "1 3" \
+        "$content"
+    echo ""
+}
+
+# ==========================================
+#   Main Flow (matches real script exactly)
+# ==========================================
+
+clear
+show_logo
+sleep 0.5
+
 # Step 1: Homebrew
 show_step "Installing Homebrew"
-sleep 0.4
+sleep 0.3
 show_success "Homebrew already installed"
 
 # Step 2: UI toolkit
 show_step "Installing UI toolkit"
-sleep 0.4
+sleep 0.3
 show_success "gum already installed"
 
 # Step 3: CLI tools
 show_step "Installing CLI tools"
-gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing AWS CLI..." -- sleep 0.8
+spin_install "Installing AWS CLI..." sleep 0.4
 show_success "Installed AWS CLI"
-gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing jq..." -- sleep 0.5
+spin_install "Installing jq..." sleep 0.3
 show_success "Installed jq"
-gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing GitHub CLI..." -- sleep 0.5
+spin_install "Installing GitHub CLI..." sleep 0.3
 show_success "Installed GitHub CLI"
-gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing glow..." -- sleep 0.5
+spin_install "Verifying GitHub authentication..." sleep 0.3
+show_success "GitHub already authenticated"
+spin_install "Verifying repository access..." sleep 0.3
+show_success "Repository access confirmed"
+spin_install "Loading configuration..." sleep 0.3
+show_success "Loaded configuration"
+spin_install "Installing glow..." sleep 0.3
 show_success "Installed glow"
-gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing 1Password CLI..." -- sleep 0.6
+spin_install "Installing 1Password CLI..." sleep 0.4
 show_success "Installed 1Password CLI"
 
 # Step 4: Verify 1Password
 show_step "Verifying 1Password"
-sleep 0.5
-show_success "1Password CLI connected"
+spin_install "Checking 1Password CLI..." sleep 0.3
+show_success "Checked 1Password CLI"
 
 # Step 5: Configure environment
 show_step "Configuring environment"
-sleep 0.4
-show_success "OP_ACCOUNT already configured"
 sleep 0.2
+show_success "OP_ACCOUNT already configured"
+sleep 0.1
 show_success "PATH already configured"
 
 # Step 6: Build native apps
 show_step "Building native apps"
-gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading credential helper..." -- sleep 0.6
-gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "Compiling credential helper..." -- sleep 1.0
+spin_download "Downloading credential helper..." sleep 0.4
+show_success "Downloaded credential helper"
+spin_process "Compiling credential helper..." sleep 0.6
 show_success "Compiled credential helper"
-gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading menu bar app..." -- sleep 0.6
-gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "Compiling menu bar app..." -- sleep 1.2
-gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading icons..." -- sleep 0.4
+spin_download "Downloading menu bar app..." sleep 0.4
+show_success "Downloaded menu bar app"
+spin_process "Compiling menu bar app..." sleep 0.8
+show_success "Compiled menu bar app"
+spin_download "Downloading icons..." sleep 0.3
+show_success "Downloaded icons"
+spin_process "Creating app bundle..." sleep 0.3
 show_success "Created app bundle"
 
 # Step 7: Cleanup
 show_step "Cleaning up"
-sleep 0.5
+spin_process "Removing legacy files..." sleep 0.3
 show_success "Removed legacy files"
 
 # Step 8: Launch
 show_step "Launching app"
-sleep 0.4
+spin_process "Stopping previous instances..." sleep 0.3
+show_success "Stopped previous instances"
+spin_process "Launching menu bar app..." sleep 0.3
 show_success "Launched menu bar app"
-gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "Testing initial sync..." -- sleep 1.0
+spin_system "Testing initial sync..." sleep 0.5
 show_success "Tested initial sync"
 
-# Final banner with synthwave colors
-echo ""
-
-header=$(gum style \
-    --foreground "$HEX_GREEN" \
-    --bold \
-    --align center \
-    "✓ Setup Complete!")
-
-info=$(gum style \
-    --foreground "$HEX_WHITE" \
-    --padding "0 0" \
-    "Look for the {{ORG_NAME}} icon in your menu bar." \
-    "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Test your AWS access:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls")" \
-    "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Use a client profile:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile <client>")" \
-    "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "Daily at 8:00 AM Central, or click icon to sync now")" \
-    "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Enable Launch at Login:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "Click menu bar icon → Launch at Login")")
-
-content=$(gum join --vertical --align center "$header" "$info")
-
-gum style \
-    --border double \
-    --border-foreground "$HEX_GREEN" \
-    --padding "1 3" \
-    --margin "0 1" \
-    "$content"
-
-echo ""
+# Completion
+show_completion
 
 # Hold on final screen so viewers can read
 sleep 2
