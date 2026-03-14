@@ -4,6 +4,10 @@
 
 set -euo pipefail
 
+# Ensure full color support for VHS recording
+export TERM=xterm-256color
+export COLORTERM=truecolor
+
 # 80s Retro Synthwave Color Palette
 HEX_PINK="#ff71ce"
 HEX_PURPLE="#b967ff"
@@ -55,7 +59,7 @@ show_logo() {
 # Display a step header with progress indicator
 show_step() {
     local title="$1"
-    ((CURRENT_STEP++))
+    CURRENT_STEP=$((CURRENT_STEP + 1))
 
     echo ""
     local badge
@@ -97,7 +101,8 @@ spin_process() {
 spin_download() {
     local title="$1"
     shift
-    gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
+    # Use 'points' instead of 'globe' - globe uses emoji that don't animate well in VHS
+    gum spin --spinner points --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
 }
 
 spin_system() {
