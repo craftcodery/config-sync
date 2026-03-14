@@ -79,24 +79,24 @@ logo=$(gum style \
     --border-foreground "$HEX_PURPLE" \
     --padding "0 2" \
     --bold \
-    "██╗   ██╗ ██████╗ ██╗   ██╗██████╗ " \
-    "╚██╗ ██╔╝██╔═══██╗██║   ██║██╔══██╗" \
-    " ╚████╔╝ ██║   ██║██║   ██║██████╔╝" \
-    "  ╚██╔╝  ██║   ██║██║   ██║██╔══██╗" \
-    "   ██║   ╚██████╔╝╚██████╔╝██║  ██║" \
-    "   ╚═╝    ╚═════╝  ╚═════╝ ╚═╝  ╚═╝" \
-    "████████╗███████╗ █████╗ ███╗   ███╗" \
-    "╚══██╔══╝██╔════╝██╔══██╗████╗ ████║" \
-    "   ██║   █████╗  ███████║██╔████╔██║" \
-    "   ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║" \
-    "   ██║   ███████╗██║  ██║██║ ╚═╝ ██║" \
-    "   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝")
+    "{{ASCII_LOGO_LINE_01}}" \
+    "{{ASCII_LOGO_LINE_02}}" \
+    "{{ASCII_LOGO_LINE_03}}" \
+    "{{ASCII_LOGO_LINE_04}}" \
+    "{{ASCII_LOGO_LINE_05}}" \
+    "{{ASCII_LOGO_LINE_06}}" \
+    "{{ASCII_LOGO_LINE_07}}" \
+    "{{ASCII_LOGO_LINE_08}}" \
+    "{{ASCII_LOGO_LINE_09}}" \
+    "{{ASCII_LOGO_LINE_10}}" \
+    "{{ASCII_LOGO_LINE_11}}" \
+    "{{ASCII_LOGO_LINE_12}}")
 
 tagline=$(gum style \
     --foreground "$HEX_CYAN" \
     --italic \
     --padding "0 2" \
-    "Config Sync")
+    "{{APP_NAME_SHORT}}")
 
 echo ""
 gum join --vertical --align center "$logo" "$tagline"
@@ -149,13 +149,15 @@ show_success "gum already installed"
 # Step 3: CLI tools
 show_step "Installing CLI tools"
 gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing AWS CLI..." -- sleep 0.8
-show_success "AWS CLI ready"
+show_success "Installed AWS CLI"
 gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing jq..." -- sleep 0.5
-show_success "jq ready"
+show_success "Installed jq"
+gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing GitHub CLI..." -- sleep 0.5
+show_success "Installed GitHub CLI"
 gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing glow..." -- sleep 0.5
-show_success "glow ready"
+show_success "Installed glow"
 gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "Installing 1Password CLI..." -- sleep 0.6
-show_success "1Password CLI ready"
+show_success "Installed 1Password CLI"
 
 # Step 4: Verify 1Password
 show_step "Verifying 1Password"
@@ -173,22 +175,23 @@ show_success "PATH already configured"
 show_step "Building native apps"
 gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading credential helper..." -- sleep 0.6
 gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "Compiling credential helper..." -- sleep 1.0
-show_success "Credential helper built"
+show_success "Compiled credential helper"
 gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading menu bar app..." -- sleep 0.6
 gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "Compiling menu bar app..." -- sleep 1.2
 gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "Downloading icons..." -- sleep 0.4
-show_success "Menu bar app built"
+show_success "Created app bundle"
 
 # Step 7: Cleanup
 show_step "Cleaning up"
 sleep 0.5
-show_success "Cleanup complete"
+show_success "Removed legacy files"
 
 # Step 8: Launch
 show_step "Launching app"
 sleep 0.4
-show_success "Menu bar app launched"
-gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "Running initial sync..." -- sleep 1.0
+show_success "Launched menu bar app"
+gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "Testing initial sync..." -- sleep 1.0
+show_success "Tested initial sync"
 
 # Final banner with synthwave colors
 echo ""
@@ -202,13 +205,13 @@ header=$(gum style \
 info=$(gum style \
     --foreground "$HEX_WHITE" \
     --padding "0 0" \
-    "Look for the Config Sync icon in your menu bar." \
+    "Look for the {{ORG_NAME}} icon in your menu bar." \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Test your AWS access:")" \
     "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls")" \
     "" \
-    "$(gum style --foreground "$HEX_PINK" --bold "Use a different profile:")" \
-    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile some-client")" \
+    "$(gum style --foreground "$HEX_PINK" --bold "Use a client profile:")" \
+    "  $(gum style --foreground "$HEX_GRAY" "aws s3 ls --profile <client>")" \
     "" \
     "$(gum style --foreground "$HEX_PINK" --bold "Sync schedule:")" \
     "  $(gum style --foreground "$HEX_GRAY" "Daily at 8:00 AM Central, or click icon to sync now")" \

@@ -5,9 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:  # Allow manual trigger
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+# Sets permissions of the GITHUB_TOKEN
 permissions:
-  contents: read
+  contents: write  # Need write to commit generated demo.gif
   pages: write
   id-token: write
 
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Process templates
         run: |
@@ -104,6 +106,39 @@ jobs:
             echo "Processed docs/aws/readability.js"
           fi
 
+          # Process demo.tape.template (if exists)
+          if [[ -f docs/aws/demo.tape.template ]]; then
+            cp docs/aws/demo.tape.template docs/aws/demo.tape
+
+            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/aws/demo.tape
+            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/demo.tape
+
+            echo "Processed docs/aws/demo.tape"
+          fi
+
+          # Process demo-mock.sh.template (if exists)
+          if [[ -f docs/aws/demo-mock.sh.template ]]; then
+            cp docs/aws/demo-mock.sh.template docs/aws/demo-mock.sh
+
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/demo-mock.sh
+            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" docs/aws/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" docs/aws/demo-mock.sh
+            chmod +x docs/aws/demo-mock.sh
+
+            echo "Processed docs/aws/demo-mock.sh"
+          fi
+
           # Process SSH index.html.template (if exists)
           if [[ -f docs/ssh/index.html.template ]]; then
             cp docs/ssh/index.html.template docs/ssh/index.html
@@ -126,6 +161,52 @@ jobs:
             sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/index.html
 
             echo "Processed docs/index.html"
+          fi
+
+      - name: Install VHS and dependencies
+        run: |
+          # Install ffmpeg (required by VHS)
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+          # Install ttyd (required by VHS)
+          sudo apt-get install -y ttyd
+
+          # Install gum (required by demo-mock.sh)
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+          sudo apt-get update
+          sudo apt-get install -y gum
+
+          # Install VHS
+          go install github.com/charmbracelet/vhs@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Generate demo GIF
+        run: |
+          cd docs/aws
+          if [[ -f demo.tape ]]; then
+            echo "Generating demo.gif from demo.tape..."
+            $HOME/go/bin/vhs demo.tape
+            echo "Generated demo.gif"
+          fi
+
+      - name: Commit generated demo.gif
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if demo.gif has changed or is new
+          git add docs/aws/demo.gif
+          if git diff --cached --quiet docs/aws/demo.gif; then
+            echo "No changes to demo.gif"
+          else
+            git commit -m "Regenerate demo.gif from templates
+
+            [skip ci]"
+            git push
+            echo "Committed and pushed demo.gif"
           fi
 
       - name: Setup Pages
