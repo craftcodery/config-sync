@@ -16,3 +16,6 @@
 # Local testing
 .local/
 test/
+
+# Generated files (built during CI/CD)
+docs/aws/demo.gif

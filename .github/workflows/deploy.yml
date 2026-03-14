@@ -7,7 +7,6 @@ on:
 
 # Sets permissions of the GITHUB_TOKEN
 permissions:
-  contents: write  # Need write to commit generated demo.gif
   pages: write
   id-token: write
 
@@ -22,8 +21,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Process templates
         run: |
@@ -190,23 +187,6 @@ jobs:
             echo "Generating demo.gif from demo.tape..."
             $HOME/go/bin/vhs demo.tape
             echo "Generated demo.gif"
-          fi
-
-      - name: Commit generated demo.gif
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Check if demo.gif has changed or is new
-          git add docs/aws/demo.gif
-          if git diff --cached --quiet docs/aws/demo.gif; then
-            echo "No changes to demo.gif"
-          else
-            git commit -m "Regenerate demo.gif from templates
-
-            [skip ci]"
-            git push
-            echo "Committed and pushed demo.gif"
           fi
 
       - name: Setup Pages
