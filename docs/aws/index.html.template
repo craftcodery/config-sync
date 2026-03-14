@@ -744,7 +744,7 @@ for var in ORG_NAME APP_NAME BUNDLE_ID DOMAIN LOCAL_DIR GITHUB_OWNER GITHUB_REPO
 done
 
 # Set CONFIG_DIR based on loaded config
-CONFIG_DIR="$HOME/.$LOCAL_DIR/aws"
+CONFIG_DIR="$HOME/$LOCAL_DIR/aws"
 
 show_success "Loaded configuration"
 
@@ -821,10 +821,10 @@ else
 fi
 
 # Ensure PATH includes config dir
-if ! grep -q ".$LOCAL_DIR/aws" "$SHELL_PROFILE" 2>/dev/null; then
+if ! grep -q "$LOCAL_DIR/aws" "$SHELL_PROFILE" 2>/dev/null; then
     echo '' >> "$SHELL_PROFILE"
     echo "# $ORG_NAME AWS tools" >> "$SHELL_PROFILE"
-    echo "export PATH=\"\$HOME/.$LOCAL_DIR/aws:\$PATH\"" >> "$SHELL_PROFILE"
+    echo "export PATH=\"\$HOME/$LOCAL_DIR/aws:\$PATH\"" >> "$SHELL_PROFILE"
     show_success "PATH updated"
 else
     show_success "PATH already configured"
