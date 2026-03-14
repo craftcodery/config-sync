@@ -2,8 +2,7 @@
 
 Sets up AWS CLI on employee MacBooks with automatic 1Password credential integration.
 
-<!-- Update this URL after configuring your domain in config.json -->
-![Demo](https://config.yourteam.example/aws/demo.gif)
+![Demo](https://craftcodery.github.io/config-sync/aws/demo.gif)
 
 ## Quick Start
 

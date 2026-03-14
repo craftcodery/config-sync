@@ -2,8 +2,7 @@
 
 A template repository for employee workstation configuration management. Native macOS menu bar apps that keep configurations up to date via 1Password integration.
 
-<!-- Update this URL after configuring your domain in config.json -->
-![Demo](https://config.yourteam.example/aws/demo.gif)
+![Demo](https://craftcodery.github.io/config-sync/aws/demo.gif)
 
 ## Overview
 

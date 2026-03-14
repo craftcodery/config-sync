@@ -7,7 +7,7 @@ Output demo.gif
 Require gum
 
 # Shell and typography
-Set Shell "zsh"
+Set Shell "bash"
 Set FontSize 13
 Set LineHeight 1.3
 
