@@ -120,6 +120,7 @@ jobs:
 
             sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/demo-mock.sh
             sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/demo-mock.sh
+            sed -i "s|{{TAGLINE}}|$TAGLINE|g" docs/aws/demo-mock.sh
             sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" docs/aws/demo-mock.sh
             sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" docs/aws/demo-mock.sh
             sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" docs/aws/demo-mock.sh
