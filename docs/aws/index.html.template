@@ -881,7 +881,7 @@ sed -i.bak "s|your-org/config-sync|$(sed_escape "$GITHUB_OWNER/$GITHUB_REPO")|g"
 sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/ConfigSync.swift"
 sed -i.bak "s|Your Team Config Sync|$(sed_escape "$APP_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
 sed -i.bak "s|com.yourteam.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|\.yourteam|.$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
+sed -i.bak "s|\.yourteam|$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
 sed -i.bak "s|Your Team|$(sed_escape "$ORG_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
 rm -f "$CONFIG_DIR/ConfigSync.swift.bak"
 
