@@ -958,7 +958,9 @@ LAUNCHD_DIR="$HOME/Library/LaunchAgents"
 spin_process "Removing legacy files..." \
     bash -c "
         # Clean up any launchd services (legacy and current bundle ID patterns)
-        for old_plist in \"$BUNDLE_ID.plist\" 'com.yourteam.aws-config-sync.plist' 'com.yourteam.sync.plist' 'com.yourteam.config-sync.plist'; do
+        # Extract org from bundle ID (e.g., 'northbuilt' from 'com.northbuilt.config-sync')
+        BUNDLE_ORG=\$(echo \"$BUNDLE_ID\" | cut -d. -f2)
+        for old_plist in \"$BUNDLE_ID.plist\" \"com.\$BUNDLE_ORG.aws-config-sync.plist\" \"com.\$BUNDLE_ORG.sync.plist\" \"com.\$BUNDLE_ORG.config-sync.plist\"; do
             if [[ -f \"$LAUNCHD_DIR/\$old_plist\" ]]; then
                 launchctl unload \"$LAUNCHD_DIR/\$old_plist\" 2>/dev/null || true
                 rm -f \"$LAUNCHD_DIR/\$old_plist\"
