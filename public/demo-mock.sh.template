@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Mock setup script for VHS demo - simulates the enhanced setup experience
-# This creates a beautiful demo without actually running installations
+# Mock setup script for VHS demo - simulates the setup experience
+# This creates a beautiful demo without actually running installations.
+# Must match the real script's phases, step count, and messaging.
 
 set -euo pipefail
 
@@ -18,7 +19,7 @@ HEX_WHITE="#f0e6ff"
 HEX_BG="#1a1a2e"
 
 CURRENT_STEP=0
-TOTAL_STEPS=8
+TOTAL_STEPS=7
 
 # Display the ASCII art logo with synthwave styling
 show_logo() {
@@ -64,7 +65,7 @@ show_step() {
     echo ""
     local badge
     badge=$(gum style \
-        --foreground "$HEX_WHITE" \
+        --foreground 15 \
         --background "$HEX_PURPLE" \
         --padding "0 1" \
         --bold \
@@ -85,23 +86,11 @@ show_success() {
     gum style --foreground "$HEX_GREEN" --margin "0 1" "✓ $1"
 }
 
-# Spinners matching the real script
-spin_install() {
-    local title="$1"
-    shift
-    gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "$title" -- "$@"
-}
-
+# Run a command with animated spinner
 spin_process() {
     local title="$1"
     shift
     gum spin --spinner dot --spinner.foreground "$HEX_PINK" --title "$title" -- "$@"
-}
-
-spin_system() {
-    local title="$1"
-    shift
-    gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "$title" -- "$@"
 }
 
 # Display completion banner (matches real script)
@@ -145,82 +134,75 @@ show_completion() {
 }
 
 # ==========================================
-#   Main Flow (matches real script exactly)
+#   Main Flow (matches real script phases)
 # ==========================================
 
 clear
 show_logo
-sleep 0.5
+sleep 0.4
 
-# Step 1: Homebrew
+# Phase 1: Homebrew
 show_step "Installing Homebrew"
-sleep 0.3
+spin_process "Installing Homebrew..." sleep 0.4
 show_success "Homebrew already installed"
 
-# Step 2: UI toolkit
-show_step "Installing UI toolkit"
-sleep 0.3
-show_success "gum already installed"
+# Phase 2: Gum
+show_step "Installing Gum"
+spin_process "Installing Gum..." sleep 0.4
+show_success "Gum already installed"
 
-# Step 3: CLI tools
+# Phase 3: CLI tools
 show_step "Installing CLI tools"
-spin_install "Installing AWS CLI..." sleep 0.4
+spin_process "Installing AWS CLI..." sleep 0.4
 show_success "Installed AWS CLI"
-spin_install "Installing jq..." sleep 0.3
+spin_process "Installing jq..." sleep 0.4
 show_success "Installed jq"
-spin_install "Installing GitHub CLI..." sleep 0.3
+spin_process "Installing GitHub CLI..." sleep 0.4
 show_success "Installed GitHub CLI"
-spin_install "Verifying GitHub authentication..." sleep 0.3
+spin_process "Verifying GitHub authentication..." sleep 0.4
 show_success "GitHub already authenticated"
-spin_install "Verifying repository access..." sleep 0.3
+spin_process "Verifying repository access..." sleep 0.4
 show_success "Repository access confirmed"
-spin_install "Loading configuration..." sleep 0.3
+spin_process "Loading configuration..." sleep 0.4
 show_success "Loaded configuration"
-spin_install "Installing glow..." sleep 0.3
-show_success "Installed glow"
-spin_install "Installing 1Password CLI..." sleep 0.4
+spin_process "Installing 1Password CLI..." sleep 0.4
 show_success "Installed 1Password CLI"
 
-# Step 4: Verify 1Password
+# Phase 4: Verify 1Password
 show_step "Verifying 1Password"
-spin_install "Checking 1Password CLI..." sleep 0.3
-show_success "Checked 1Password CLI"
+spin_process "Checking 1Password CLI..." sleep 0.4
+show_success "1Password CLI connected"
 
-# Step 5: Configure environment
+# Phase 5: Configure environment
 show_step "Configuring environment"
-sleep 0.2
+show_success "Created directory structure"
 show_success "OP_ACCOUNT already configured"
-sleep 0.1
 show_success "PATH already configured"
 
-# Step 6: Build native apps
+# Phase 6: Build native apps
 show_step "Building native apps"
 spin_process "Downloading credential helper..." sleep 0.4
 show_success "Downloaded credential helper"
-spin_process "Compiling credential helper..." sleep 0.6
+spin_process "Compiling credential helper..." sleep 0.4
 show_success "Compiled credential helper"
 spin_process "Downloading menu bar app..." sleep 0.4
 show_success "Downloaded menu bar app"
-spin_process "Compiling menu bar app..." sleep 0.8
+show_success "Applied branding configuration"
+spin_process "Compiling menu bar app..." sleep 0.4
 show_success "Compiled menu bar app"
-spin_process "Downloading icons..." sleep 0.3
+spin_process "Downloading icons..." sleep 0.4
 show_success "Downloaded icons"
-spin_process "Creating app bundle..." sleep 0.3
+spin_process "Creating app bundle..." sleep 0.4
 show_success "Created app bundle"
 
-# Step 7: Cleanup
-show_step "Cleaning up"
-spin_process "Removing legacy files..." sleep 0.3
-show_success "Removed legacy files"
-
-# Step 8: Launch
+# Phase 7: Launch
 show_step "Launching app"
-spin_process "Stopping previous instances..." sleep 0.3
+spin_process "Stopping previous instances..." sleep 0.4
 show_success "Stopped previous instances"
-spin_process "Launching menu bar app..." sleep 0.3
+spin_process "Launching menu bar app..." sleep 0.4
 show_success "Launched menu bar app"
-spin_system "Testing initial sync..." sleep 0.5
-show_success "Tested initial sync"
+spin_process "Running initial sync..." sleep 0.4
+show_success "Initial sync complete"
 
 # Completion
 show_completion

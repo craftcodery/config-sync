@@ -6,7 +6,7 @@
     "bundleId": "com.yourteam.config-sync",
     "domain": "config.yourteam.example",
     "localDir": ".yourteam",
-    "tagline": "AWS Config Sync • Powered by 1Password",
+    "tagline": "MacBook Developer Config Tool",
     "asciiLogo": [
       "██╗   ██╗ ██████╗ ██╗   ██╗██████╗ ",
       "╚██╗ ██╔╝██╔═══██╗██║   ██║██╔══██╗",
@@ -24,7 +24,8 @@
   },
   "github": {
     "owner": "your-org",
-    "repo": "config-sync"
+    "repo": "config-sync",
+    "pathPrefix": "public"
   },
   "onepassword": {
     "account": "your-team.1password.com"

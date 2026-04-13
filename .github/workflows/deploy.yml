@@ -3,15 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -21,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Process templates
         run: |
           # Read config.json
-          CONFIG=$(cat docs/config.json)
+          CONFIG=$(cat public/config.json)
 
           # Extract branding values
           ORG_NAME=$(echo "$CONFIG" | jq -r '.branding.orgName')
@@ -42,7 +40,7 @@ jobs:
           GITHUB_OWNER=$(echo "$CONFIG" | jq -r '.github.owner')
           GITHUB_REPO=$(echo "$CONFIG" | jq -r '.github.repo')
 
-          # Extract ASCII logo lines (array to individual lines)
+          # Extract ASCII logo lines
           LOGO_LINE_01=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[0] // empty')
           LOGO_LINE_02=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[1] // empty')
           LOGO_LINE_03=$(echo "$CONFIG" | jq -r '.branding.asciiLogo[2] // empty')
@@ -62,114 +60,79 @@ jobs:
           echo "  GITHUB_OWNER: $GITHUB_OWNER"
           echo "  GITHUB_REPO: $GITHUB_REPO"
 
-          # Process AWS index.html.template
-          if [[ -f docs/aws/index.html.template ]]; then
-            cp docs/aws/index.html.template docs/aws/index.html
+          # Process index.html.template (setup script)
+          if [[ -f public/index.html.template ]]; then
+            cp public/index.html.template public/index.html
 
-            # Replace placeholders (use | as delimiter to avoid issues with URLs)
-            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/index.html
-            sed -i "s|{{APP_NAME}}|$APP_NAME|g" docs/aws/index.html
-            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/index.html
-            sed -i "s|{{BUNDLE_ID}}|$BUNDLE_ID|g" docs/aws/index.html
-            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/aws/index.html
-            sed -i "s|{{LOCAL_DIR}}|$LOCAL_DIR|g" docs/aws/index.html
-            sed -i "s|{{TAGLINE}}|$TAGLINE|g" docs/aws/index.html
-            sed -i "s|{{OP_ACCOUNT}}|$OP_ACCOUNT|g" docs/aws/index.html
-            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/aws/index.html
-            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/aws/index.html
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" public/index.html
+            sed -i "s|{{APP_NAME}}|$APP_NAME|g" public/index.html
+            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" public/index.html
+            sed -i "s|{{BUNDLE_ID}}|$BUNDLE_ID|g" public/index.html
+            sed -i "s|{{DOMAIN}}|$DOMAIN|g" public/index.html
+            sed -i "s|{{LOCAL_DIR}}|$LOCAL_DIR|g" public/index.html
+            sed -i "s|{{TAGLINE}}|$TAGLINE|g" public/index.html
+            sed -i "s|{{OP_ACCOUNT}}|$OP_ACCOUNT|g" public/index.html
+            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" public/index.html
+            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" public/index.html
+            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" public/index.html
 
-            # Replace ASCII logo lines
-            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" docs/aws/index.html
-            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" docs/aws/index.html
-
-            echo "Processed docs/aws/index.html"
+            echo "Processed public/index.html"
           fi
 
-          # Process AWS readability.js.template (if exists)
-          if [[ -f docs/aws/readability.js.template ]]; then
-            cp docs/aws/readability.js.template docs/aws/readability.js
-
-            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/readability.js
-
-            echo "Processed docs/aws/readability.js"
+          # Process readability.js.template
+          if [[ -f public/readability.js.template ]]; then
+            cp public/readability.js.template public/readability.js
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" public/readability.js
+            echo "Processed public/readability.js"
           fi
 
-          # Process demo.tape.template (if exists)
-          if [[ -f docs/aws/demo.tape.template ]]; then
-            cp docs/aws/demo.tape.template docs/aws/demo.tape
-
-            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/aws/demo.tape
-            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/demo.tape
-
-            echo "Processed docs/aws/demo.tape"
+          # Process demo.tape.template
+          if [[ -f public/demo.tape.template ]]; then
+            cp public/demo.tape.template public/demo.tape
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" public/demo.tape
+            sed -i "s|{{APP_NAME}}|$APP_NAME|g" public/demo.tape
+            sed -i "s|{{DOMAIN}}|$DOMAIN|g" public/demo.tape
+            echo "Processed public/demo.tape"
           fi
 
-          # Process demo-mock.sh.template (if exists)
-          if [[ -f docs/aws/demo-mock.sh.template ]]; then
-            cp docs/aws/demo-mock.sh.template docs/aws/demo-mock.sh
-
-            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/aws/demo-mock.sh
-            sed -i "s|{{APP_NAME_SHORT}}|$APP_NAME_SHORT|g" docs/aws/demo-mock.sh
-            sed -i "s|{{TAGLINE}}|$TAGLINE|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" docs/aws/demo-mock.sh
-            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" docs/aws/demo-mock.sh
-            chmod +x docs/aws/demo-mock.sh
-
-            echo "Processed docs/aws/demo-mock.sh"
-          fi
-
-          # Process SSH index.html.template (if exists)
-          if [[ -f docs/ssh/index.html.template ]]; then
-            cp docs/ssh/index.html.template docs/ssh/index.html
-
-            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/ssh/index.html
-            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/ssh/index.html
-            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/ssh/index.html
-            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/ssh/index.html
-
-            echo "Processed docs/ssh/index.html"
-          fi
-
-          # Process root landing page template (if exists)
-          if [[ -f docs/index.html.template ]]; then
-            cp docs/index.html.template docs/index.html
-
-            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" docs/index.html
-            sed -i "s|{{DOMAIN}}|$DOMAIN|g" docs/index.html
-            sed -i "s|{{GITHUB_OWNER}}|$GITHUB_OWNER|g" docs/index.html
-            sed -i "s|{{GITHUB_REPO}}|$GITHUB_REPO|g" docs/index.html
-
-            echo "Processed docs/index.html"
+          # Process demo-mock.sh.template
+          if [[ -f public/demo-mock.sh.template ]]; then
+            cp public/demo-mock.sh.template public/demo-mock.sh
+            sed -i "s|{{ORG_NAME}}|$ORG_NAME|g" public/demo-mock.sh
+            sed -i "s|{{APP_NAME}}|$APP_NAME|g" public/demo-mock.sh
+            sed -i "s|{{TAGLINE}}|$TAGLINE|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_01}}|$LOGO_LINE_01|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_02}}|$LOGO_LINE_02|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_03}}|$LOGO_LINE_03|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_04}}|$LOGO_LINE_04|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_05}}|$LOGO_LINE_05|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_06}}|$LOGO_LINE_06|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_07}}|$LOGO_LINE_07|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_08}}|$LOGO_LINE_08|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_09}}|$LOGO_LINE_09|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_10}}|$LOGO_LINE_10|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_11}}|$LOGO_LINE_11|g" public/demo-mock.sh
+            sed -i "s|{{ASCII_LOGO_LINE_12}}|$LOGO_LINE_12|g" public/demo-mock.sh
+            chmod +x public/demo-mock.sh
+            echo "Processed public/demo-mock.sh"
           fi
 
       - name: Install VHS and dependencies
         run: |
-          # Install ffmpeg (required by VHS)
+          # Install ffmpeg and ttyd (required by VHS)
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-          # Install ttyd (required by VHS)
-          sudo apt-get install -y ttyd
+          sudo apt-get install -y ffmpeg ttyd
 
           # Install gum (required by demo-mock.sh)
           sudo mkdir -p /etc/apt/keyrings
@@ -183,8 +146,11 @@ jobs:
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Generate demo GIF
+        env:
+          CLICOLOR_FORCE: 1
+          FORCE_COLOR: 1
         run: |
-          cd docs/aws
+          cd public
           if [[ -f demo.tape ]]; then
             echo "Generating demo.gif from demo.tape..."
             $HOME/go/bin/vhs demo.tape
@@ -192,12 +158,12 @@ jobs:
           fi
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v6
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
-          path: docs
+          path: public
 
   deploy:
     environment:
@@ -208,4 +174,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

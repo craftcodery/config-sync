@@ -65,25 +65,23 @@ To get programmatic access keys:
 **Examples:**
 - `AWS - Your Team`
 - `AWS - Example Client`
-- `AWS - My Company Production`
+- `AWS - Production`
 
 ## AWS Config Integration
 
-Once credentials are stored following this standard, add to `docs/aws/aws-config`:
+Once credentials are stored following this standard, add to `public/config/aws-profiles.toml`:
 
-```ini
-# Without MFA
-[profile client-name]
-credential_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name"
-region = us-east-1
-
-# With MFA
-[profile client-name]
-credential_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name"
-mfa_process = __HELPER_PATH__ "AWS - Client Name" "Vault-Name" --otp
-mfa_serial = arn:aws:iam::123456789012:mfa/username
-region = us-east-1
+```toml
+[[profiles]]
+name = "client-name"
+region = "us-east-1"
+output = "json"
+item_title = "AWS - Client Name"
+vault = "Employee"
+has_mfa = true
 ```
+
+The setup script generates the appropriate AWS config with credential_process directives.
 
 ## Security Best Practices
 
@@ -105,7 +103,7 @@ Ensure field labels match exactly:
 
 Run validation to diagnose issues:
 ```bash
-aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
+~/.yourteam/app/aws-vault-1password "AWS - Client Name" "Vault-Name" --validate
 ```
 
 ### Access Key ID doesn't look like an AWS key

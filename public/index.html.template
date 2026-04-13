@@ -7,13 +7,14 @@
 ## <style>body { background-color: #1a1a2e; color: #f0e6ff; font-size: 0.85em; margin: 0; padding: 20px; } pre[class*="language-"] { background: transparent !important; margin: 0 !important; padding: 0 !important; } code[class*="language-"] { text-shadow: none !important; } .token.comment { color: #6c6783; } .token.keyword { color: #b967ff; } .token.string { color: #05ffa1; } .token.function { color: #ff71ce; } .token.variable { color: #01cdfe; }</style>
 
 : ==========================================
-:   {{ORG_NAME}} AWS Config Sync
+:   {{ORG_NAME}} Config Sync
+:   Unified AWS + SSH Setup
 : ==========================================
 
-# This script configures AWS CLI on your MacBook for {{ORG_NAME}} development.
+# This script configures AWS CLI and SSH on your MacBook for {{ORG_NAME}} development.
 # Run it with:
 #
-:   curl -fsSL {{DOMAIN}}/aws | bash
+:   curl -fsSL {{DOMAIN}} | bash
 #
 # Prerequisites:
 #   - GitHub account with access to {{GITHUB_OWNER}}/{{GITHUB_REPO}}
@@ -24,8 +25,9 @@
 #     (System Settings → Privacy & Security → Full Disk Access)
 #
 # What this installs:
-#   - Homebrew, AWS CLI, jq, gum, glow, gh, 1Password CLI
+#   - Homebrew, AWS CLI, jq, gum, gh, 1Password CLI
 #   - AWS credential helper (fetches credentials from 1Password)
+#   - SSH configuration with 1Password SSH agent integration
 #   - Menu bar app for sync status and manual sync
 #
 # Source code:
@@ -37,6 +39,9 @@
 : ==========================================
 
 set -euo pipefail
+
+# Prevent Homebrew from auto-updating on each install (speeds up script significantly)
+export HOMEBREW_NO_AUTO_UPDATE=1
 
 # ------------------------------------------
 #   Logging Setup
@@ -61,7 +66,7 @@ log "Running on: $(uname -a)"
 # Everything else is derived from config.json
 GH_OWNER="{{GITHUB_OWNER}}"
 GH_REPO="{{GITHUB_REPO}}"
-GH_PATH_PREFIX="docs"  # Path prefix for files in the repo
+GH_PATH_PREFIX="public"
 
 # These will be populated from config.json after jq is installed
 ORG_NAME=""
@@ -149,54 +154,15 @@ if [[ -n "${NO_COLOR:-}" ]] || [[ "${TERM:-}" == "dumb" ]]; then
     USE_COLOR=false
 fi
 
-# Detect terminal color support level
-# COLORTERM=truecolor or 24bit indicates full RGB support
-SUPPORTS_TRUECOLOR=false
-if [[ "${COLORTERM:-}" == "truecolor" ]] || [[ "${COLORTERM:-}" == "24bit" ]]; then
-    SUPPORTS_TRUECOLOR=true
-fi
-
-# Helper to conditionally apply ANSI codes
-ansi() {
-    if [[ "$USE_COLOR" == "true" ]]; then
-        echo -e "$1"
-    fi
-}
-
 # Escape special characters for sed replacement strings
 # Escapes: & \ | (our delimiter) and newlines
 sed_escape() {
     printf '%s' "$1" | sed -e 's/[&/\|]/\\&/g'
 }
 
-# ------------------------------------------
-#   GitHub CLI helper for private repo access
-# ------------------------------------------
-
-# Check if gh CLI is available
-has_gh() {
-    command -v gh &> /dev/null
-}
-
-# Fetch file content from private GitHub repo using gh api
-# Usage: gh_fetch "aws/ConfigSync.swift" > output.swift
-gh_fetch() {
-    local file_path="$1"
-    gh api "repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/$file_path" \
-        -H "Accept: application/vnd.github.raw" 2>/dev/null
-}
-
-# Download file from private GitHub repo to local path
-# Usage: gh_download "aws/ConfigSync.swift" "/path/to/output.swift"
-gh_download() {
-    local file_path="$1"
-    local output_path="$2"
-    gh_fetch "$file_path" > "$output_path"
-}
-
 # Progress tracking (used in step headers)
 CURRENT_STEP=0
-TOTAL_STEPS=8
+TOTAL_STEPS=7
 
 # ------------------------------------------
 #   Display Functions (with gum fallback)
@@ -264,8 +230,7 @@ show_logo() {
     else
         # NO_COLOR mode - plain text only
         echo "  ╔══════════════════════════════════════════════════╗"
-        echo "  ║  {{ORG_NAME}}                                      ║"
-        echo "  ║  AWS Config Sync                                 ║"
+        echo "  ║  {{ORG_NAME}} Config Sync                        ║"
         echo "  ╚══════════════════════════════════════════════════╝"
         echo "    {{TAGLINE}}"
     fi
@@ -305,7 +270,7 @@ show_step() {
     fi
 }
 
-# Display a section header (smaller than step)
+# Display a section header (smaller than step, for sub-sections within a phase)
 show_section() {
     local message="$1"
     echo ""
@@ -374,22 +339,7 @@ show_error() {
     fi
 }
 
-# Run a command with animated spinner (different spinners for different operations)
-# Each spinner uses a different synthwave color for visual variety
-spin_download() {
-    local title="$1"
-    shift
-    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
-        gum spin --spinner globe --spinner.foreground "$HEX_CYAN" --title "$title" -- "$@"
-    elif [[ "$USE_COLOR" == "true" ]]; then
-        echo -e "  ${ANSI_CYAN}↓${ANSI_RESET} $title"
-        "$@"
-    else
-        echo "  [DL] $title"
-        "$@"
-    fi
-}
-
+# Run a command with animated spinner
 spin_process() {
     local title="$1"
     shift
@@ -404,35 +354,7 @@ spin_process() {
     fi
 }
 
-spin_install() {
-    local title="$1"
-    shift
-    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
-        gum spin --spinner meter --spinner.foreground "$HEX_PURPLE" --title "$title" -- "$@"
-    elif [[ "$USE_COLOR" == "true" ]]; then
-        echo -e "  ${ANSI_PURPLE}▶${ANSI_RESET} $title"
-        "$@"
-    else
-        echo "  [INST] $title"
-        "$@"
-    fi
-}
-
-spin_system() {
-    local title="$1"
-    shift
-    if has_gum && [[ "$USE_COLOR" == "true" ]]; then
-        gum spin --spinner pulse --spinner.foreground "$HEX_GREEN" --title "$title" -- "$@"
-    elif [[ "$USE_COLOR" == "true" ]]; then
-        echo -e "  ${ANSI_GREEN}◉${ANSI_RESET} $title"
-        "$@"
-    else
-        echo "  [SYS] $title"
-        "$@"
-    fi
-}
-
-# Display an error box and exit
+# Display an error box with prominent border
 show_error_box() {
     echo ""
     if has_gum && [[ "$USE_COLOR" == "true" ]]; then
@@ -524,7 +446,7 @@ show_completion() {
         echo ""
         echo "╔══════════════════════════════════════════════════╗"
         echo "║                                                  ║"
-        echo "║            Setup Complete!                       ║"
+        echo "║            ✓ Setup Complete!                     ║"
         echo "║                                                  ║"
         echo "║   Look for the $org icon in your menu bar.      ║"
         echo "║                                                  ║"
@@ -587,32 +509,33 @@ else
     show_success "Homebrew already installed"
 fi
 
-# ------------------------------------------
-#   Phase 2: Install gum (enables pretty UI)
-# ------------------------------------------
+: ------------------------------------------
+:   Phase 2: Install Gum
+: ------------------------------------------
 
-show_step "Installing UI toolkit"
+show_step "Installing Gum"
 
 if ! has_gum; then
-    log "Installing gum..."
-    spin_install "Installing gum..." bash -c "brew install gum >> '$LOG_FILE' 2>&1"
+    log "Installing Gum..."
+    spin_process "Installing Gum..." bash -c "brew install gum < /dev/null >> '$LOG_FILE' 2>&1"
     if ! has_gum; then
-        echo "  [ERROR] gum installation failed. Check log: $LOG_FILE"
+        show_error "Gum installation failed"
+        show_info "Check log file: $LOG_FILE"
         exit 1
     fi
-    show_success "Installed gum"
+    show_success "Installed Gum"
 else
-    show_success "gum already installed"
+    show_success "Gum already installed"
 fi
 
 : ------------------------------------------
-:   Phase 3: Install tools
+:   Phase 3: Install CLI tools
 : ------------------------------------------
 
 show_step "Installing CLI tools"
 
 log "Installing AWS CLI..."
-spin_install "Installing AWS CLI..." bash -c "brew install awscli >> '$LOG_FILE' 2>&1 || true"
+spin_process "Installing AWS CLI..." bash -c "brew install awscli < /dev/null >> '$LOG_FILE' 2>&1"
 if ! command -v aws &>/dev/null; then
     show_error "AWS CLI installation failed"
     show_info "Check log file: $LOG_FILE"
@@ -621,7 +544,7 @@ fi
 show_success "Installed AWS CLI"
 
 log "Installing jq..."
-spin_install "Installing jq..." bash -c "brew install jq >> '$LOG_FILE' 2>&1 || true"
+spin_process "Installing jq..." bash -c "brew install jq < /dev/null >> '$LOG_FILE' 2>&1"
 if ! command -v jq &>/dev/null; then
     show_error "jq installation failed"
     show_info "Check log file: $LOG_FILE"
@@ -630,7 +553,7 @@ fi
 show_success "Installed jq"
 
 log "Installing GitHub CLI..."
-spin_install "Installing GitHub CLI..." bash -c "brew install gh >> '$LOG_FILE' 2>&1 || true"
+spin_process "Installing GitHub CLI..." bash -c "brew install gh < /dev/null >> '$LOG_FILE' 2>&1"
 if ! command -v gh &>/dev/null; then
     show_error "GitHub CLI installation failed"
     show_info "Check log file: $LOG_FILE"
@@ -644,7 +567,7 @@ show_success "Installed GitHub CLI"
 # The config files are in a private repo, so we need gh authenticated
 
 GH_AUTH_OK=false
-spin_install "Verifying GitHub authentication..." bash -c "gh auth status &>/dev/null && exit 0 || exit 1" && GH_AUTH_OK=true
+spin_process "Verifying GitHub authentication..." bash -c "gh auth status &>/dev/null && exit 0 || exit 1" && GH_AUTH_OK=true
 
 if [[ "$GH_AUTH_OK" != "true" ]]; then
     show_warning "GitHub authentication required"
@@ -668,9 +591,7 @@ if [[ "$GH_AUTH_OK" != "true" ]]; then
         show_error_box \
             "GitHub authentication required" \
             "" \
-            "Please run these commands first:" \
-            "" \
-            "  gh auth login" \
+            "Please run: gh auth login" \
             "" \
             "Then re-run this setup script."
         exit 1
@@ -681,7 +602,7 @@ fi
 
 # Verify access to the repo
 REPO_ACCESS_OK=false
-spin_install "Verifying repository access..." bash -c "gh api repos/$GH_OWNER/$GH_REPO &>/dev/null" && REPO_ACCESS_OK=true
+spin_process "Verifying repository access..." bash -c "gh api repos/$GH_OWNER/$GH_REPO &>/dev/null" && REPO_ACCESS_OK=true
 if [[ "$REPO_ACCESS_OK" != "true" ]]; then
     show_error_box \
         "Cannot access repository" \
@@ -701,7 +622,7 @@ show_success "Repository access confirmed"
 # This allows the entire setup to be customized by editing config.json
 
 CONFIG_TMP=$(mktemp)
-spin_install "Loading configuration..." bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/config.json -H 'Accept: application/vnd.github.raw' > '$CONFIG_TMP' 2>/dev/null"
+spin_process "Loading configuration..." bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/config.json -H 'Accept: application/vnd.github.raw' > '$CONFIG_TMP' 2>/dev/null"
 
 if [[ ! -s "$CONFIG_TMP" ]]; then
     rm -f "$CONFIG_TMP"
@@ -744,21 +665,11 @@ for var in ORG_NAME APP_NAME BUNDLE_ID DOMAIN LOCAL_DIR GITHUB_OWNER GITHUB_REPO
 done
 
 # Set CONFIG_DIR based on loaded config
-CONFIG_DIR="$HOME/$LOCAL_DIR/aws"
-
+CONFIG_DIR="$HOME/$LOCAL_DIR"
 show_success "Loaded configuration"
 
-log "Installing glow..."
-spin_install "Installing glow..." bash -c "brew install glow >> '$LOG_FILE' 2>&1 || true"
-if ! command -v glow &>/dev/null; then
-    show_error "glow installation failed"
-    show_info "Check log file: $LOG_FILE"
-    exit 1
-fi
-show_success "Installed glow"
-
 log "Installing 1Password CLI..."
-spin_install "Installing 1Password CLI..." bash -c "brew install --cask 1password-cli >> '$LOG_FILE' 2>&1 || true"
+spin_process "Installing 1Password CLI..." bash -c "brew install --cask 1password-cli < /dev/null >> '$LOG_FILE' 2>&1"
 if ! command -v op &>/dev/null; then
     show_error "1Password CLI installation failed"
     show_info "Check log file: $LOG_FILE"
@@ -773,11 +684,11 @@ show_success "Installed 1Password CLI"
 show_step "Verifying 1Password"
 
 OP_CLI_OK=false
-spin_install "Checking 1Password CLI..." bash -c "op account list &>/dev/null" && OP_CLI_OK=true
+spin_process "Checking 1Password CLI..." bash -c "op account list &>/dev/null" && OP_CLI_OK=true
 
 if [[ "$OP_CLI_OK" != "true" ]]; then
     show_error_box \
-        "⚠ 1Password CLI needs to be connected" \
+        "1Password CLI needs to be connected" \
         "" \
         "Please complete these steps:" \
         "" \
@@ -788,14 +699,20 @@ if [[ "$OP_CLI_OK" != "true" ]]; then
         "After enabling, re-run this script."
     exit 1
 fi
-
-show_success "Checked 1Password CLI"
+show_success "1Password CLI connected"
 
 : ------------------------------------------
-:   Phase 5: Configure OP_ACCOUNT
+:   Phase 5: Configure environment
 : ------------------------------------------
 
 show_step "Configuring environment"
+
+# Create directory structure (frontloaded for all subsequent phases)
+# SSH dirs (~/.ssh/config.d, ~/.config/1Password/ssh) are managed by the Swift app's SSHModule
+log "Creating directory structure..."
+mkdir -p "$CONFIG_DIR"/{app,config,logs}
+mkdir -p "$HOME/.aws"
+show_success "Created directory structure"
 
 # Determine shell profile (create .zshrc if none exists)
 SHELL_PROFILE=""
@@ -811,8 +728,9 @@ else
 fi
 
 if ! grep -q "OP_ACCOUNT" "$SHELL_PROFILE" 2>/dev/null; then
+    log "Configuring OP_ACCOUNT in $SHELL_PROFILE"
     echo '' >> "$SHELL_PROFILE"
-    echo "# 1Password account for AWS credential helper ($ORG_NAME)" >> "$SHELL_PROFILE"
+    echo "# 1Password account for credential helpers ($ORG_NAME)" >> "$SHELL_PROFILE"
     echo "export OP_ACCOUNT=\"$OP_ACCOUNT_VALUE\"" >> "$SHELL_PROFILE"
     export OP_ACCOUNT="$OP_ACCOUNT_VALUE"
     show_success "OP_ACCOUNT configured"
@@ -820,11 +738,12 @@ else
     show_success "OP_ACCOUNT already configured"
 fi
 
-# Ensure PATH includes config dir
-if ! grep -q "$LOCAL_DIR/aws" "$SHELL_PROFILE" 2>/dev/null; then
+# Ensure PATH includes app dir
+if ! grep -q "$LOCAL_DIR/app" "$SHELL_PROFILE" 2>/dev/null; then
+    log "Adding $LOCAL_DIR/app to PATH in $SHELL_PROFILE"
     echo '' >> "$SHELL_PROFILE"
-    echo "# $ORG_NAME AWS tools" >> "$SHELL_PROFILE"
-    echo "export PATH=\"\$HOME/$LOCAL_DIR/aws:\$PATH\"" >> "$SHELL_PROFILE"
+    echo "# $ORG_NAME tools" >> "$SHELL_PROFILE"
+    echo "export PATH=\"\$HOME/$LOCAL_DIR/app:\$PATH\"" >> "$SHELL_PROFILE"
     show_success "PATH updated"
 else
     show_success "PATH already configured"
@@ -836,60 +755,98 @@ fi
 
 show_step "Building native apps"
 
-mkdir -p "$CONFIG_DIR"
-mkdir -p "$HOME/.aws"
+APP_DIR="$CONFIG_DIR/app"
 
-# Download and compile credential helper
+show_section "Credential Helper"
+
+# Download and compile AWS credential helper
+log "Downloading credential helper..."
 spin_process "Downloading credential helper..." \
-    bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/aws/aws-vault-1password.swift -H 'Accept: application/vnd.github.raw' > '$CONFIG_DIR/aws-vault-1password.swift'"
+    bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Helpers/aws-vault-1password.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/aws-vault-1password.swift'"
 show_success "Downloaded credential helper"
 
 # Substitute branding values in Swift source before compiling
 # Use sed_escape to handle special characters in config values
-sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/aws-vault-1password.swift"
-rm -f "$CONFIG_DIR/aws-vault-1password.swift.bak"
+sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$APP_DIR/aws-vault-1password.swift"
+rm -f "$APP_DIR/aws-vault-1password.swift.bak"
 
 log "Compiling credential helper..."
 spin_process "Compiling credential helper..." \
-    bash -c "swiftc -O -o '$CONFIG_DIR/aws-vault-1password' '$CONFIG_DIR/aws-vault-1password.swift' >> '$LOG_FILE' 2>&1"
+    bash -c "swiftc -O -o '$APP_DIR/aws-vault-1password' '$APP_DIR/aws-vault-1password.swift' >> '$LOG_FILE' 2>&1"
 
-if [[ ! -f "$CONFIG_DIR/aws-vault-1password" ]]; then
+if [[ ! -f "$APP_DIR/aws-vault-1password" ]]; then
     show_error "Credential helper compilation failed"
     show_info "Check log file: $LOG_FILE"
     exit 1
 fi
-
-rm -f "$CONFIG_DIR/aws-vault-1password.swift"
-chmod +x "$CONFIG_DIR/aws-vault-1password"
+rm -f "$APP_DIR/aws-vault-1password.swift"
+chmod +x "$APP_DIR/aws-vault-1password"
 show_success "Compiled credential helper"
 
-# Download and compile menu bar app
-APP_DIR="$CONFIG_DIR/$APP_EXECUTABLE.app"
-APP_CONTENTS="$APP_DIR/Contents"
-APP_MACOS="$APP_CONTENTS/MacOS"
-APP_RESOURCES="$APP_CONTENTS/Resources"
+show_section "Menu Bar App"
 
+# Download menu bar app source files
+log "Downloading menu bar app..."
 spin_process "Downloading menu bar app..." \
-    bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/aws/ConfigSync.swift -H 'Accept: application/vnd.github.raw' > '$CONFIG_DIR/ConfigSync.swift'"
+    bash -c "
+        mkdir -p '$APP_DIR/src/Core' '$APP_DIR/src/Modules'
+
+        # Download Core modules
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/Config.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/Config.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/GitHubClient.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/GitHubClient.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/TOMLParser.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/TOMLParser.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/Preferences.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/Preferences.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/NetworkMonitor.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/NetworkMonitor.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/NotificationManager.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/NotificationManager.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/OnePasswordCLI.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/OnePasswordCLI.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/SyncModule.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/SyncModule.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Core/UpdateManager.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Core/UpdateManager.swift'
+
+        # Download Module implementations
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Modules/AWSModule.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Modules/AWSModule.swift'
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/Modules/SSHModule.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/Modules/SSHModule.swift'
+
+        # Download main app
+        gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/app/ConfigSync.swift -H 'Accept: application/vnd.github.raw' > '$APP_DIR/src/ConfigSync.swift'
+    "
 show_success "Downloaded menu bar app"
 
-# Substitute branding values in Swift source before compiling
+# Substitute branding values in all Swift files
 # Order matters: replace longer/more specific strings first
 # Use sed_escape to handle special characters in config values
-sed -i.bak "s|config.yourteam.example|$(sed_escape "$DOMAIN")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|your-org/config-sync|$(sed_escape "$GITHUB_OWNER/$GITHUB_REPO")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|Your Team Config Sync|$(sed_escape "$APP_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|com.yourteam.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|\.yourteam|$(sed_escape "$LOCAL_DIR")|g" "$CONFIG_DIR/ConfigSync.swift"
-sed -i.bak "s|Your Team|$(sed_escape "$ORG_NAME")|g" "$CONFIG_DIR/ConfigSync.swift"
-rm -f "$CONFIG_DIR/ConfigSync.swift.bak"
+log "Applying branding substitutions to Swift source files..."
+for swift_file in "$APP_DIR"/src/*.swift "$APP_DIR"/src/Core/*.swift "$APP_DIR"/src/Modules/*.swift; do
+    if [[ -f "$swift_file" ]]; then
+        sed -i.bak "s|config.yourteam.example|$(sed_escape "$DOMAIN")|g" "$swift_file"
+        sed -i.bak "s|your-org/config-sync|$(sed_escape "$GITHUB_OWNER/$GITHUB_REPO")|g" "$swift_file"
+        sed -i.bak "s|your-team.1password.com|$(sed_escape "$OP_ACCOUNT_VALUE")|g" "$swift_file"
+        sed -i.bak "s|Your Team Config Sync|$(sed_escape "$APP_NAME")|g" "$swift_file"
+        sed -i.bak "s|com.yourteam.config-sync|$(sed_escape "$BUNDLE_ID")|g" "$swift_file"
+        sed -i.bak "s|\.yourteam|$(sed_escape "$LOCAL_DIR")|g" "$swift_file"
+        sed -i.bak "s|Your Team|$(sed_escape "$ORG_NAME")|g" "$swift_file"
+        rm -f "$swift_file.bak"
+    fi
+done
+show_success "Applied branding configuration"
 
 log "Compiling menu bar app..."
 spin_process "Compiling menu bar app..." \
-    bash -c "swiftc -O -o '$CONFIG_DIR/$APP_EXECUTABLE' '$CONFIG_DIR/ConfigSync.swift' >> '$LOG_FILE' 2>&1"
+    bash -c "swiftc -O -o '$APP_DIR/$APP_EXECUTABLE' \
+        '$APP_DIR/src/Core/Config.swift' \
+        '$APP_DIR/src/Core/GitHubClient.swift' \
+        '$APP_DIR/src/Core/TOMLParser.swift' \
+        '$APP_DIR/src/Core/Preferences.swift' \
+        '$APP_DIR/src/Core/NetworkMonitor.swift' \
+        '$APP_DIR/src/Core/NotificationManager.swift' \
+        '$APP_DIR/src/Core/OnePasswordCLI.swift' \
+        '$APP_DIR/src/Core/SyncModule.swift' \
+        '$APP_DIR/src/Core/UpdateManager.swift' \
+        '$APP_DIR/src/Modules/AWSModule.swift' \
+        '$APP_DIR/src/Modules/SSHModule.swift' \
+        '$APP_DIR/src/ConfigSync.swift' \
+        >> '$LOG_FILE' 2>&1"
 
-if [[ ! -f "$CONFIG_DIR/$APP_EXECUTABLE" ]]; then
+if [[ ! -f "$APP_DIR/$APP_EXECUTABLE" ]]; then
     show_error "Menu bar app compilation failed"
     show_info "Check log file: $LOG_FILE"
     exit 1
@@ -897,24 +854,31 @@ fi
 show_success "Compiled menu bar app"
 
 # Download app icons
+log "Downloading icons..."
 spin_process "Downloading icons..." \
-    bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/aws/AppIcon.icns -H 'Accept: application/vnd.github.raw' > /tmp/AppIcon.icns && gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/aws/MenuBarIcon.png -H 'Accept: application/vnd.github.raw' > /tmp/MenuBarIcon.png 2>/dev/null || true"
+    bash -c "gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/assets/AppIcon.icns -H 'Accept: application/vnd.github.raw' > /tmp/AppIcon.icns && gh api repos/$GH_OWNER/$GH_REPO/contents/$GH_PATH_PREFIX/assets/MenuBarIcon.png -H 'Accept: application/vnd.github.raw' > /tmp/MenuBarIcon.png 2>/dev/null || true"
 show_success "Downloaded icons"
 
 # Create .app bundle structure
+log "Creating app bundle..."
+BUNDLE_DIR="$APP_DIR/$APP_NAME.app"
+BUNDLE_CONTENTS="$BUNDLE_DIR/Contents"
+BUNDLE_MACOS="$BUNDLE_CONTENTS/MacOS"
+BUNDLE_RESOURCES="$BUNDLE_CONTENTS/Resources"
+
 spin_process "Creating app bundle..." \
     bash -c "
-        rm -rf '$APP_DIR'
-        mkdir -p '$APP_MACOS'
-        mkdir -p '$APP_RESOURCES'
-        mv '$CONFIG_DIR/$APP_EXECUTABLE' '$APP_MACOS/$APP_EXECUTABLE'
-        rm -f '$CONFIG_DIR/ConfigSync.swift'
-        mv /tmp/AppIcon.icns '$APP_RESOURCES/AppIcon.icns'
-        mv /tmp/MenuBarIcon.png '$APP_RESOURCES/MenuBarIcon.png' 2>/dev/null || true
+        rm -rf '$BUNDLE_DIR'
+        mkdir -p '$BUNDLE_MACOS'
+        mkdir -p '$BUNDLE_RESOURCES'
+        mv '$APP_DIR/$APP_EXECUTABLE' '$BUNDLE_MACOS/$APP_EXECUTABLE'
+        rm -rf '$APP_DIR/src'
+        mv /tmp/AppIcon.icns '$BUNDLE_RESOURCES/AppIcon.icns'
+        mv /tmp/MenuBarIcon.png '$BUNDLE_RESOURCES/MenuBarIcon.png' 2>/dev/null || true
     "
 
 # Create Info.plist (using variables from config.json)
-cat > "$APP_CONTENTS/Info.plist" << PLIST
+cat > "$BUNDLE_CONTENTS/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -928,9 +892,9 @@ cat > "$APP_CONTENTS/Info.plist" << PLIST
     <key>CFBundleDisplayName</key>
     <string>$APP_NAME</string>
     <key>CFBundleVersion</key>
-    <string>5</string>
+    <string>6</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.3.0</string>
+    <string>2.0.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconFile</key>
@@ -944,51 +908,26 @@ cat > "$APP_CONTENTS/Info.plist" << PLIST
 </dict>
 </plist>
 PLIST
-
 show_success "Created app bundle"
 
 : ------------------------------------------
-:   Phase 7: Cleanup old versions
-: ------------------------------------------
-
-show_step "Cleaning up"
-
-LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-
-spin_process "Removing legacy files..." \
-    bash -c "
-        # Clean up any launchd services (legacy and current bundle ID patterns)
-        # Extract org from bundle ID (e.g., 'northbuilt' from 'com.northbuilt.config-sync')
-        BUNDLE_ORG=\$(echo \"$BUNDLE_ID\" | cut -d. -f2)
-        for old_plist in \"$BUNDLE_ID.plist\" \"com.\$BUNDLE_ORG.aws-config-sync.plist\" \"com.\$BUNDLE_ORG.sync.plist\" \"com.\$BUNDLE_ORG.config-sync.plist\"; do
-            if [[ -f \"$LAUNCHD_DIR/\$old_plist\" ]]; then
-                launchctl unload \"$LAUNCHD_DIR/\$old_plist\" 2>/dev/null || true
-                rm -f \"$LAUNCHD_DIR/\$old_plist\"
-            fi
-        done
-        # Remove old files
-        rm -f \"$CONFIG_DIR/sync.sh\"
-    "
-show_success "Removed legacy files"
-
-: ------------------------------------------
-:   Phase 8: Launch menu bar app
+:   Phase 7: Launch menu bar app
 : ------------------------------------------
 
 show_step "Launching app"
 
 spin_process "Stopping previous instances..." \
-    bash -c "pkill -f '$APP_EXECUTABLE.app' 2>/dev/null; pkill -f 'ConfigSync.app' 2>/dev/null; sleep 0.3; exit 0"
+    bash -c "pkill -f '$APP_EXECUTABLE.app' 2>/dev/null; sleep 0.3; exit 0"
 show_success "Stopped previous instances"
 
 # Launch the app
 spin_process "Launching menu bar app..." \
-    bash -c "open '$APP_DIR' && sleep 0.5"
+    bash -c "open '$BUNDLE_DIR' && sleep 0.5"
 show_success "Launched menu bar app"
 
 # Wait for initial sync
-spin_process "Testing initial sync..." sleep 3
-show_success "Tested initial sync"
+spin_process "Running initial sync..." sleep 3
+show_success "Initial sync complete"
 
 : ==========================================
 :   Setup Complete
